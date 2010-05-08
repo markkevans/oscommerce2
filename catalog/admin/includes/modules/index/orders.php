@@ -19,7 +19,20 @@
     <td class="dataTableHeadingContent"><?php echo ADMIN_INDEX_ORDERS_STATUS; ?></td>
   </tr>
 <?php
-  $orders_query = tep_db_query("select o.orders_id, o.customers_name, greatest(o.date_purchased, ifnull(o.last_modified, 0)) as date_last_modified, s.orders_status_name, ot.text as order_total from " . TABLE_ORDERS . " o, " . TABLE_ORDERS_TOTAL . " ot, " . TABLE_ORDERS_STATUS . " s where o.orders_id = ot.orders_id and ot.class = 'ot_total' and o.orders_status = s.orders_status_id and s.language_id = '" . (int)$languages_id . "' order by date_last_modified desc limit 6");
+// Include application configuration parameters
+  require('includes/configure.php');
+  switch (DB_DATABASE_TYPE) {
+      case 'mysql':
+        $orders_query = tep_db_query("select o.orders_id, o.customers_name, ".
+            "greatest(o.date_purchased, ifnull(o.last_modified, 0)) as date_last_modified, ".
+            "s.orders_status_name, ot.text as order_total from " . TABLE_ORDERS . " o, " . TABLE_ORDERS_TOTAL . " ot, " . TABLE_ORDERS_STATUS . " s where o.orders_id = ot.orders_id and ot.class = 'ot_total' and o.orders_status = s.orders_status_id and s.language_id = '" . (int)$languages_id . "' order by date_last_modified desc limit 6");
+        break;
+      case 'sqlsrv':
+        $orders_query = tep_db_query("select TOP 6 o.orders_id, o.customers_name, ".
+            "(CASE WHEN (o.date_purchased > isnull(o.last_modified, '1753-01-01')) THEN o.date_purchased ELSE isnull(o.last_modified, '1753-01-01') END) as date_last_modified, ".
+            "s.orders_status_name, ot.text as order_total from " . TABLE_ORDERS . " o, " . TABLE_ORDERS_TOTAL . " ot, " . TABLE_ORDERS_STATUS . " s where o.orders_id = ot.orders_id and ot.class = 'ot_total' and o.orders_status = s.orders_status_id and s.language_id = '" . (int)$languages_id . "' order by date_last_modified desc");
+        break;
+  }
   while ($orders = tep_db_fetch_array($orders_query)) {
     echo '  <tr class="dataTableRow" onmouseover="rowOverEffect(this);" onmouseout="rowOutEffect(this);">' .
          '    <td class="dataTableContent"><a href="' . tep_href_link(FILENAME_ORDERS, 'oID=' . (int)$orders['orders_id'] . '&action=edit') . '">' . tep_output_string_protected($orders['customers_name']) . '</td>' .

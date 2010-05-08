@@ -30,22 +30,22 @@
     return mysql_close($$link);
   }
 
-  function tep_db_error($query, $errno, $error) { 
+  function tep_db_error($query, $errno, $error) {
     die('<font color="#000000"><b>' . $errno . ' - ' . $error . '<br><br>' . $query . '<br><br><small><font color="#ff0000">[TEP STOP]</font></small><br><br></b></font>');
   }
 
   function tep_db_query($query, $link = 'db_link') {
-    global $$link;
+    global $$link, $logger;
 
     if (defined('STORE_DB_TRANSACTIONS') && (STORE_DB_TRANSACTIONS == 'true')) {
-      error_log('QUERY ' . $query . "\n", 3, STORE_PAGE_PARSE_TIME_LOG);
+      if (!is_object($logger)) $logger = new logger;
+      $logger->write($query, 'QUERY');
     }
 
     $result = mysql_query($query, $$link) or tep_db_error($query, mysql_errno(), mysql_error());
 
     if (defined('STORE_DB_TRANSACTIONS') && (STORE_DB_TRANSACTIONS == 'true')) {
-       $result_error = mysql_error();
-       error_log('RESULT ' . $result . ' ' . $result_error . "\n", 3, STORE_PAGE_PARSE_TIME_LOG);
+      if (mysql_error()) $logger->write(mysql_error(), 'ERROR');
     }
 
     return $result;
@@ -99,6 +99,10 @@
     return mysql_fetch_array($db_query, MYSQL_ASSOC);
   }
 
+  function tep_db_result($result, $row, $field = '') {
+    return mysql_result($result, $row, $field);
+  }
+
   function tep_db_num_rows($db_query) {
     return mysql_num_rows($db_query);
   }
@@ -139,7 +143,7 @@
 
   function tep_db_prepare_input($string) {
     if (is_string($string)) {
-      return trim(tep_sanitize_string(stripslashes($string)));
+      return trim(stripslashes($string));
     } elseif (is_array($string)) {
       reset($string);
       while (list($key, $value) = each($string)) {

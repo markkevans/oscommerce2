@@ -57,7 +57,7 @@
   define('CURRENCY_SERVER_BACKUP', 'xe');
 
 // include the database functions
-  require(DIR_WS_FUNCTIONS . 'database.php');
+  require(DIR_WS_FUNCTIONS . 'database_' . DB_DATABASE_TYPE . '.php');
 
 // make a connection to the database... now
   tep_db_connect() or die('Unable to connect to database server!');

@@ -9,6 +9,8 @@
 
   Released under the GNU General Public License
 */
+  $db_table_types = array(array('id' => 'mysql', 'text' => 'MySQL(Default)'),
+                          array('id' => 'sqlsrv', 'text' => 'SQL Server 2005+ (native)'));
 ?>
 
 <script language="javascript" type="text/javascript" src="ext/xmlhttp/xmlhttp.js"></script>
@@ -50,7 +52,7 @@
         if (result[0] == '1') {
           document.getElementById('mBoxContents').innerHTML = '<p><img src="images/progress.gif" align="right" hspace="5" vspace="5" border="0" />The database structure is now being imported. Please be patient during this procedure.</p>';
 
-          loadXMLDoc("rpc.php?action=dbImport&server=" + urlEncode(dbServer) + "&username=" + urlEncode(dbUsername) + "&password=" + urlEncode(dbPassword) + "&name=" + urlEncode(dbName), handleHttpResponse_DoImport);
+          loadXMLDoc("rpc.php?action=dbImport&database_type=" + urlEncode(dbType) + "&server=" + urlEncode(dbServer) + "&username=" + urlEncode(dbUsername) + "&password=" + urlEncode(dbPassword) + "&name=" + urlEncode(dbName), handleHttpResponse_DoImport);
         } else {
           document.getElementById('mBoxContents').innerHTML = '<p><img src="images/failed.gif" align="right" hspace="5" vspace="5" border="0" />There was a problem connecting to the database server. The following error had occured:</p><p><b>%s</b></p><p>Please verify the connection parameters and try again.</p>'.replace('%s', result[1]);
           formSubmited = false;
@@ -72,12 +74,13 @@
 
     document.getElementById('mBoxContents').innerHTML = '<p><img src="images/progress.gif" align="right" hspace="5" vspace="5" border="0" />Testing database connection..</p>';
 
+    dbType = document.getElementById("DB_DATABASE_TYPE").value;
     dbServer = document.getElementById("DB_SERVER").value;
     dbUsername = document.getElementById("DB_SERVER_USERNAME").value;
     dbPassword = document.getElementById("DB_SERVER_PASSWORD").value;
     dbName = document.getElementById("DB_DATABASE").value;
 
-    loadXMLDoc("rpc.php?action=dbCheck&server=" + urlEncode(dbServer) + "&username=" + urlEncode(dbUsername) + "&password=" + urlEncode(dbPassword) + "&name=" + urlEncode(dbName), handleHttpResponse);
+    loadXMLDoc("rpc.php?action=dbCheck&database_type=" + urlEncode(dbType) + "&server=" + urlEncode(dbServer) + "&username=" + urlEncode(dbUsername) + "&password=" + urlEncode(dbPassword) + "&name=" + urlEncode(dbName), handleHttpResponse);
   }
 
 //-->
@@ -119,6 +122,10 @@
     <form name="install" id="installForm" action="install.php?step=2" method="post" onsubmit="prepareDB(); return false;">
 
     <table border="0" width="99%" cellspacing="0" cellpadding="5" class="inputForm">
+      <tr>
+        <td class="inputField"><?php echo 'Database Server Type<br />' . osc_draw_pull_down_menu('DB_DATABASE_TYPE', $db_table_types); ?></td>
+        <td class="inputDescription">Select the type of database server.</td>
+      </tr>
       <tr>
         <td class="inputField"><?php echo 'Database Server<br />' . osc_draw_input_field('DB_SERVER', 'localhost', 'class="text"'); ?></td>
         <td class="inputDescription">The address of the database server in the form of a hostname or IP address.</td>

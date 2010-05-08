@@ -88,6 +88,12 @@
           <td>MySQL</td>
           <td align="right"><img src="images/<?php echo (extension_loaded('mysql') ? 'tick.gif' : 'cross.gif'); ?>" border="0" width="16" height="16"></td>
         </tr>
+        <tr>
+          <td>SQL Server (native)</td>
+          <td align="right"><img src="images/<?php
+          echo (extension_loaded('sqlsrv') ? 'tick.gif' : 'cross.gif'); ?>" border="0" width="16" height="16"></td>
+        </tr>
+	
       </table>
 
       <br />
