@@ -26,7 +26,6 @@
       case 'backupnow':
         tep_set_time_limit(0);
         $backup_file = 'db_' . DB_DATABASE . '-' . date('YmdHis') . '.sql';
-        $fp = fopen(DIR_FS_BACKUP . $backup_file, 'w');
 
         $schema = '# osCommerce, Open Source E-Commerce Solutions' . "\n" .
                   '# http://www.oscommerce.com' . "\n" .
@@ -38,94 +37,107 @@
                   '# Database Server: ' . DB_SERVER . "\n" .
                   '#' . "\n" .
                   '# Backup Date: ' . date(PHP_DATE_TIME_FORMAT) . "\n\n";
-        fputs($fp, $schema);
 
-        $tables_query = tep_db_query('show tables');
-        while ($tables = tep_db_fetch_array($tables_query)) {
-          list(,$table) = each($tables);
+        if (DB_DATABASE_TYPE == 'sqlsrv' ) {
 
-          $schema = 'drop table if exists ' . $table . ';' . "\n" .
-                    'create table ' . $table . ' (' . "\n";
+            tep_db_backup(DIR_FS_BACKUP . $backup_file, DB_DATABASE, $schema);
 
-          $table_list = array();
-          $fields_query = tep_db_query("show fields from " . $table);
-          while ($fields = tep_db_fetch_array($fields_query)) {
-            $table_list[] = $fields['Field'];
+        }
+        elseif (DB_DATABASE_TYPE == 'mysql' ) {
 
-            $schema .= '  ' . $fields['Field'] . ' ' . $fields['Type'];
+            $fp = fopen(DIR_FS_BACKUP . $backup_file, 'w');
 
-            if (strlen($fields['Default']) > 0) $schema .= ' default \'' . $fields['Default'] . '\'';
+            fputs($fp, $schema);
 
-            if ($fields['Null'] != 'YES') $schema .= ' not null';
+            $tables_query = tep_db_query('show tables');
+            while ($tables = tep_db_fetch_array($tables_query)) {
+              list(,$table) = each($tables);
 
-            if (isset($fields['Extra'])) $schema .= ' ' . $fields['Extra'];
+              $schema = 'drop table if exists ' . $table . ';' . "\n" .
+                        'create table ' . $table . ' (' . "\n";
 
-            $schema .= ',' . "\n";
-          }
+              $table_list = array();
+              $fields_query = tep_db_query("show fields from " . $table);
+              while ($fields = tep_db_fetch_array($fields_query)) {
+                $table_list[] = $fields['Field'];
 
-          $schema = preg_replace("/,\n$/", '', $schema);
+                $schema .= '  ' . $fields['Field'] . ' ' . $fields['Type'];
 
-// add the keys
-          $index = array();
-          $keys_query = tep_db_query("show keys from " . $table);
-          while ($keys = tep_db_fetch_array($keys_query)) {
-            $kname = $keys['Key_name'];
+                if (strlen($fields['Default']) > 0) $schema .= ' default \'' . $fields['Default'] . '\'';
 
-            if (!isset($index[$kname])) {
-              $index[$kname] = array('unique' => !$keys['Non_unique'],
-                                     'fulltext' => ($keys['Index_type'] == 'FULLTEXT' ? '1' : '0'),
-                                     'columns' => array());
-            }
+                if ($fields['Null'] != 'YES') $schema .= ' not null';
 
-            $index[$kname]['columns'][] = $keys['Column_name'];
-          }
+                if (isset($fields['Extra'])) $schema .= ' ' . $fields['Extra'];
 
-          while (list($kname, $info) = each($index)) {
-            $schema .= ',' . "\n";
+                $schema .= ',' . "\n";
+              }
 
-            $columns = implode($info['columns'], ', ');
+              $schema = preg_replace("/,\n$/", '', $schema);
 
-            if ($kname == 'PRIMARY') {
-              $schema .= '  PRIMARY KEY (' . $columns . ')';
-            } elseif ( $info['fulltext'] == '1' ) {
-              $schema .= '  FULLTEXT ' . $kname . ' (' . $columns . ')';
-            } elseif ($info['unique']) {
-              $schema .= '  UNIQUE ' . $kname . ' (' . $columns . ')';
-            } else {
-              $schema .= '  KEY ' . $kname . ' (' . $columns . ')';
-            }
-          }
+              // add the keys
+              $index = array();
+              $keys_query = tep_db_query("show keys from " . $table);
+              while ($keys = tep_db_fetch_array($keys_query)) {
+                $kname = $keys['Key_name'];
 
-          $schema .= "\n" . ');' . "\n\n";
-          fputs($fp, $schema);
+                if (!isset($index[$kname])) {
+                  $index[$kname] = array('unique' => !$keys['Non_unique'],
+                                         'fulltext' => ($keys['Index_type'] == 'FULLTEXT' ? '1' : '0'),
+                                         'columns' => array());
+                }
 
-// dump the data
-          if ( ($table != TABLE_SESSIONS ) && ($table != TABLE_WHOS_ONLINE) ) {
-            $rows_query = tep_db_query("select " . implode(',', $table_list) . " from " . $table);
-            while ($rows = tep_db_fetch_array($rows_query)) {
-              $schema = 'insert into ' . $table . ' (' . implode(', ', $table_list) . ') values (';
+                $index[$kname]['columns'][] = $keys['Column_name'];
+              }
 
-              reset($table_list);
-              while (list(,$i) = each($table_list)) {
-                if (!isset($rows[$i])) {
-                  $schema .= 'NULL, ';
-                } elseif (tep_not_null($rows[$i])) {
-                  $row = addslashes($rows[$i]);
-                  $row = preg_replace("/\n#/", "\n".'\#', $row);
+              while (list($kname, $info) = each($index)) {
+                $schema .= ',' . "\n";
 
-                  $schema .= '\'' . $row . '\', ';
+                $columns = implode($info['columns'], ', ');
+
+                if ($kname == 'PRIMARY') {
+                  $schema .= '  PRIMARY KEY (' . $columns . ')';
+                } elseif ( $info['fulltext'] == '1' ) {
+                  $schema .= '  FULLTEXT ' . $kname . ' (' . $columns . ')';
+                } elseif ($info['unique']) {
+                  $schema .= '  UNIQUE ' . $kname . ' (' . $columns . ')';
                 } else {
-                  $schema .= '\'\', ';
+                  $schema .= '  KEY ' . $kname . ' (' . $columns . ')';
                 }
               }
 
-              $schema = preg_replace('/, $/', '', $schema) . ');' . "\n";
+              $schema .= "\n" . ');' . "\n\n";
               fputs($fp, $schema);
-            }
-          }
-        }
 
-        fclose($fp);
+              // dump the data
+              if ( ($table != TABLE_SESSIONS ) && ($table != TABLE_WHOS_ONLINE) ) {
+                $rows_query = tep_db_query("select " . implode(',', $table_list) . " from " . $table);
+                while ($rows = tep_db_fetch_array($rows_query)) {
+                  $schema = 'insert into ' . $table . ' (' . implode(', ', $table_list) . ') values (';
+
+                  reset($table_list);
+                  while (list(,$i) = each($table_list)) {
+                    if (!isset($rows[$i])) {
+                      $schema .= 'NULL, ';
+                    } elseif (tep_not_null($rows[$i])) {
+                      $row = addslashes($rows[$i]);
+                      $row = preg_replace("/\n#/", "\n".'\#', $row);
+
+                      $schema .= '\'' . $row . '\', ';
+                    } else {
+                      $schema .= '\'\', ';
+                    }
+                  }
+
+                  $schema = preg_replace('/, $/', '', $schema) . ');' . "\n";
+                  fputs($fp, $schema);
+                }
+              }
+            }
+            fclose($fp);
+        }
+        else {
+            die ('Invalid database type');
+        }
 
         if (isset($HTTP_POST_VARS['download']) && ($HTTP_POST_VARS['download'] == 'yes')) {
           switch ($HTTP_POST_VARS['compress']) {
@@ -160,6 +172,7 @@
 
         tep_redirect(tep_href_link(FILENAME_BACKUP));
         break;
+
       case 'restorenow':
       case 'restorelocalnow':
         tep_set_time_limit(0);
@@ -196,91 +209,107 @@
             }
           }
         } elseif ($action == 'restorelocalnow') {
-          $sql_file = new upload('sql_file');
 
-          if ($sql_file->parse() == true) {
-            $restore_query = fread(fopen($sql_file->tmp_filename, 'r'), filesize($sql_file->tmp_filename));
-            $read_from = $sql_file->filename;
-          }
-        }
+            if (DB_DATABASE_TYPE == 'sqlsrv') {
 
-        if (isset($restore_query)) {
-          $sql_array = array();
-          $drop_table_names = array();
-          $sql_length = strlen($restore_query);
-          $pos = strpos($restore_query, ';');
-          for ($i=$pos; $i<$sql_length; $i++) {
-            if ($restore_query[0] == '#') {
-              $restore_query = ltrim(substr($restore_query, strpos($restore_query, "\n")));
-              $sql_length = strlen($restore_query);
-              $i = strpos($restore_query, ';')-1;
-              continue;
+                $sql_file = new upload('sql_file');
+                $sql_file->parse();
+                tep_db_restore ($sql_file->tmp_filename, DB_DATABASE);
+
             }
-            if ($restore_query[($i+1)] == "\n") {
-              for ($j=($i+2); $j<$sql_length; $j++) {
-                if (trim($restore_query[$j]) != '') {
-                  $next = substr($restore_query, $j, 6);
-                  if ($next[0] == '#') {
-// find out where the break position is so we can remove this line (#comment line)
-                    for ($k=$j; $k<$sql_length; $k++) {
-                      if ($restore_query[$k] == "\n") break;
+            elseif (DB_DATABASE_TYPE == 'mysql') {
+
+              $sql_file = new upload('sql_file');
+              if ($sql_file->parse() == true) {
+                $restore_query = fread(fopen($sql_file->tmp_filename, 'r'), filesize($sql_file->tmp_filename));
+                $read_from = $sql_file->filename;
+              }
+              $sql_array = array();
+              $drop_table_names = array();
+              $sql_length = strlen($restore_query);
+              $pos = strpos($restore_query, ';');
+              for ($i=$pos; $i<$sql_length; $i++) {
+                if ($restore_query[0] == '#') {
+                  $restore_query = ltrim(substr($restore_query, strpos($restore_query, "\n")));
+                  $sql_length = strlen($restore_query);
+                  $i = strpos($restore_query, ';')-1;
+                  continue;
+                }
+                if ($restore_query[($i+1)] == "\n") {
+                  for ($j=($i+2); $j<$sql_length; $j++) {
+                    if (trim($restore_query[$j]) != '') {
+                      $next = substr($restore_query, $j, 6);
+                      if ($next[0] == '#') {
+    // find out where the break position is so we can remove this line (#comment line)
+                        for ($k=$j; $k<$sql_length; $k++) {
+                          if ($restore_query[$k] == "\n") break;
+                        }
+                        $query = substr($restore_query, 0, $i+1);
+                        $restore_query = substr($restore_query, $k);
+    // join the query before the comment appeared, with the rest of the dump
+                        $restore_query = $query . $restore_query;
+                        $sql_length = strlen($restore_query);
+                        $i = strpos($restore_query, ';')-1;
+                        continue 2;
+                      }
+                      break;
                     }
-                    $query = substr($restore_query, 0, $i+1);
-                    $restore_query = substr($restore_query, $k);
-// join the query before the comment appeared, with the rest of the dump
-                    $restore_query = $query . $restore_query;
+                  }
+                  if ($next == '') { // get the last insert query
+                    $next = 'insert';
+                  }
+                  if ( (preg_match('/create/i', $next)) || (preg_match('/insert/i', $next)) || (preg_match('/drop t/i', $next)) ) {
+                    $query = substr($restore_query, 0, $i);
+
+                    $next = '';
+                    $sql_array[] = $query;
+                    $restore_query = ltrim(substr($restore_query, $i+1));
                     $sql_length = strlen($restore_query);
                     $i = strpos($restore_query, ';')-1;
-                    continue 2;
+
+                    if (preg_match('/^create*/i', $query)) {
+                      $table_name = trim(substr($query, stripos($query, 'table ')+6));
+                      $table_name = substr($table_name, 0, strpos($table_name, ' '));
+
+                      $drop_table_names[] = $table_name;
+                    }
                   }
-                  break;
                 }
               }
-              if ($next == '') { // get the last insert query
-                $next = 'insert';
+
+              tep_db_query('drop table if exists ' . implode(', ', $drop_table_names));
+
+              for ($i=0, $n=sizeof($sql_array); $i<$n; $i++) {
+                tep_db_query($sql_array[$i]);
               }
-              if ( (preg_match('/create/i', $next)) || (preg_match('/insert/i', $next)) || (preg_match('/drop t/i', $next)) ) {
-                $query = substr($restore_query, 0, $i);
 
-                $next = '';
-                $sql_array[] = $query;
-                $restore_query = ltrim(substr($restore_query, $i+1));
-                $sql_length = strlen($restore_query);
-                $i = strpos($restore_query, ';')-1;
-
-                if (preg_match('/^create*/i', $query)) {
-                  $table_name = trim(substr($query, stripos($query, 'table ')+6));
-                  $table_name = substr($table_name, 0, strpos($table_name, ' '));
-
-                  $drop_table_names[] = $table_name;
-                }
-              }
+            } else {
+                die ('Invalid database type');
             }
-          }
 
-          tep_db_query('drop table if exists ' . implode(', ', $drop_table_names));
+            tep_session_close();
 
-          for ($i=0, $n=sizeof($sql_array); $i<$n; $i++) {
-            tep_db_query($sql_array[$i]);
-          }
+            tep_db_query("delete from " . TABLE_WHOS_ONLINE);
+            tep_db_query("delete from " . TABLE_SESSIONS);
 
-          tep_session_close();
+            tep_db_query("delete from " . TABLE_CONFIGURATION . " where configuration_key = 'DB_LAST_RESTORE'");
 
-          tep_db_query("delete from " . TABLE_WHOS_ONLINE);
-          tep_db_query("delete from " . TABLE_SESSIONS);
+            if (DB_DATABASE_TYPE == 'sqlsrv') {
+                tep_db_query("insert into " . TABLE_CONFIGURATION . " values ('Last Database Restore', 'DB_LAST_RESTORE', '" . $read_from . "', 'Last database restore file', '6', '0', null, getdate(), '', '')");
+            }
+            elseif (DB_DATABASE_TYPE == 'mysql') {
+                tep_db_query("insert into " . TABLE_CONFIGURATION . " values (null, 'Last Database Restore', 'DB_LAST_RESTORE', '" . $read_from . "', 'Last database restore file', '6', '0', null, now(), '', '')");
+            }
 
-          tep_db_query("delete from " . TABLE_CONFIGURATION . " where configuration_key = 'DB_LAST_RESTORE'");
-          tep_db_query("insert into " . TABLE_CONFIGURATION . " values (null, 'Last Database Restore', 'DB_LAST_RESTORE', '" . $read_from . "', 'Last database restore file', '6', '0', null, now(), '', '')");
+            if (isset($remove_raw) && ($remove_raw == true)) {
+                unlink($restore_from);
+            }
 
-          if (isset($remove_raw) && ($remove_raw == true)) {
-            unlink($restore_from);
-          }
+            $messageStack->add_session(SUCCESS_DATABASE_RESTORED, 'success');
+            }
 
-          $messageStack->add_session(SUCCESS_DATABASE_RESTORED, 'success');
-        }
-
-        tep_redirect(tep_href_link(FILENAME_BACKUP));
-        break;
+            tep_redirect(tep_href_link(FILENAME_BACKUP));
+            break;
       case 'download':
         $extension = substr($HTTP_GET_VARS['file'], -3);
 

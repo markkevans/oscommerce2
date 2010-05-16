@@ -792,6 +792,18 @@
 
     list($system, $host, $kernel) = preg_split('/[\s,]+/', @exec('uname -a'), 5);
 
+    $db_version = '';
+    switch (DB_DATABASE_TYPE)
+    {
+        case 'mysql':
+            $db_version = 'MySQL ' . (function_exists('mysql_get_server_info') ? mysql_get_server_info() : '');
+            break;
+
+        case 'sqlsrv':
+            $db_version = 'SqlSrv ' . tep_db_get_server_version();
+            break;
+    }
+
     return array('date' => tep_datetime_short(date('Y-m-d H:i:s')),
                  'system' => $system,
                  'kernel' => $kernel,
@@ -803,7 +815,7 @@
                  'zend' => (function_exists('zend_version') ? zend_version() : ''),
                  'db_server' => DB_SERVER,
                  'db_ip' => gethostbyname(DB_SERVER),
-                 'db_version' => 'MySQL ' . (function_exists('mysql_get_server_info') ? mysql_get_server_info() : ''),
+                 'db_version' => $db_version,
                  'db_date' => tep_datetime_short($db['datetime']));
   }
 

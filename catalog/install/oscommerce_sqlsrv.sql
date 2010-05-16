@@ -21,13 +21,91 @@
 #         (don't use inline comments)
 */
 
- IF NOT EXISTS(SELECT * FROM sys.schemas WHERE [name] = N'dbo')      
-     EXEC ('CREATE SCHEMA dbo')                                   
- GO                                                               
+ IF NOT EXISTS(SELECT * FROM sys.schemas WHERE [name] = N'dbo')
+     EXEC ('CREATE SCHEMA dbo')
+ GO
 
- IF NOT EXISTS(SELECT * FROM sys.schemas WHERE [name] = N'INFORMATION_SCHEMA')      
-     EXEC ('CREATE SCHEMA INFORMATION_SCHEMA')                                   
- GO                                                               
+ IF NOT EXISTS(SELECT * FROM sys.schemas WHERE [name] = N'INFORMATION_SCHEMA')
+     EXEC ('CREATE SCHEMA INFORMATION_SCHEMA')
+ GO
+
+IF  EXISTS (SELECT * FROM sys.objects so JOIN sys.schemas sc ON so.schema_id = sc.schema_id WHERE so.name = N'action_recorder' AND sc.name=N'dbo' AND type in (N'U'))
+BEGIN
+
+  DECLARE @drop_statement varchar(500)
+
+  DECLARE drop_cursor CURSOR FOR
+      SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
+      FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
+      WHERE fk.referenced_object_id =
+          (
+             SELECT so.object_id
+             FROM sys.objects so JOIN sys.schemas sc
+             ON so.schema_id = sc.schema_id
+             WHERE so.name = N'action_recorder' AND sc.name=N'dbo' AND type in (N'U')
+           )
+
+  OPEN drop_cursor
+
+  FETCH NEXT FROM drop_cursor
+  INTO @drop_statement
+
+  WHILE @@FETCH_STATUS = 0
+  BEGIN
+     EXEC (@drop_statement)
+
+     FETCH NEXT FROM drop_cursor
+     INTO @drop_statement
+  END
+
+  CLOSE drop_cursor
+  DEALLOCATE drop_cursor
+
+  DROP TABLE [dbo].[action_recorder]
+END
+GO
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE
+[dbo].[action_recorder]
+(
+   [id] int IDENTITY(4, 1)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [module] varchar(255)  NOT NULL,
+   [user_id] int DEFAULT NULL  NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [user_name] varchar(255) DEFAULT NULL  NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [identifier] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to CHAR according to character set mapping for latin1 character set
+   */
+
+   [success] char(1) DEFAULT NULL  NULL,
+   [date_added] datetime2(0)  NOT NULL
+)
+GO
 
 IF  EXISTS (SELECT * FROM sys.objects so JOIN sys.schemas sc ON so.schema_id = sc.schema_id WHERE so.name = N'address_book' AND sc.name=N'dbo' AND type in (N'U'))
 BEGIN
@@ -36,11 +114,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'address_book' AND sc.name=N'dbo' AND type in (N'U')
@@ -63,17 +141,17 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[address_book]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[address_book]
 (
-   [address_book_id] int IDENTITY(2, 1)  NOT NULL,
+   [address_book_id] int IDENTITY(3, 1)  NOT NULL,
    [customers_id] int  NOT NULL,
 
    /*
@@ -81,15 +159,63 @@ CREATE TABLE
    *   M2SS0055: Data type was converted to CHAR according to character set mapping for latin1 character set
    */
 
-   [entry_gender] char(1)  NOT NULL,
-   [entry_company] varchar(32) DEFAULT NULL  NULL,
-   [entry_firstname] varchar(32)  NOT NULL,
-   [entry_lastname] varchar(32)  NOT NULL,
-   [entry_street_address] varchar(64)  NOT NULL,
-   [entry_suburb] varchar(32) DEFAULT NULL  NULL,
-   [entry_postcode] varchar(10)  NOT NULL,
-   [entry_city] varchar(32)  NOT NULL,
-   [entry_state] varchar(32) DEFAULT NULL  NULL,
+   [entry_gender] char(1) DEFAULT NULL  NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [entry_company] varchar(255) DEFAULT NULL  NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [entry_firstname] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [entry_lastname] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [entry_street_address] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [entry_suburb] varchar(255) DEFAULT NULL  NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [entry_postcode] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [entry_city] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [entry_state] varchar(255) DEFAULT NULL  NULL,
    [entry_country_id] int DEFAULT '0'  NOT NULL,
    [entry_zone_id] int DEFAULT '0'  NOT NULL
 )
@@ -102,11 +228,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'address_format' AND sc.name=N'dbo' AND type in (N'U')
@@ -129,18 +255,30 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[address_format]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[address_format]
 (
    [address_format_id] int IDENTITY(6, 1)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [address_format] varchar(128)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [address_summary] varchar(48)  NOT NULL
 )
 GO
@@ -152,11 +290,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'administrators' AND sc.name=N'dbo' AND type in (N'U')
@@ -179,18 +317,30 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[administrators]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[administrators]
 (
    [id] int IDENTITY(2, 1)  NOT NULL,
-   [user_name] varchar(32)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [user_name] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [user_password] varchar(40)  NOT NULL
 )
 GO
@@ -202,11 +352,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'banners' AND sc.name=N'dbo' AND type in (N'U')
@@ -229,20 +379,44 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[banners]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[banners]
 (
    [banners_id] int IDENTITY(2, 1)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [banners_title] varchar(64)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [banners_url] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [banners_image] varchar(64)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [banners_group] varchar(10)  NOT NULL,
 
    /*
@@ -267,11 +441,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'banners_history' AND sc.name=N'dbo' AND type in (N'U')
@@ -294,14 +468,14 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[banners_history]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[banners_history]
 (
    [banners_history_id] int IDENTITY(2, 1)  NOT NULL,
@@ -319,11 +493,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'categories' AND sc.name=N'dbo' AND type in (N'U')
@@ -346,17 +520,23 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[categories]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[categories]
 (
    [categories_id] int IDENTITY(21, 1)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [categories_image] varchar(64) DEFAULT NULL  NULL,
    [parent_id] int DEFAULT '0'  NOT NULL,
    [sort_order] int DEFAULT NULL  NULL,
@@ -372,11 +552,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'categories_description' AND sc.name=N'dbo' AND type in (N'U')
@@ -399,18 +579,24 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[categories_description]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[categories_description]
 (
    [categories_id] int DEFAULT '0'  NOT NULL,
    [language_id] int DEFAULT '1'  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [categories_name] varchar(32)  NOT NULL
 )
 GO
@@ -422,11 +608,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'configuration' AND sc.name=N'dbo' AND type in (N'U')
@@ -449,26 +635,62 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[configuration]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[configuration]
 (
-   [configuration_id] int IDENTITY(144, 1)  NOT NULL,
+   [configuration_id] int IDENTITY(164, 1)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [configuration_title] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [configuration_key] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [configuration_value] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [configuration_description] varchar(255)  NOT NULL,
    [configuration_group_id] int  NOT NULL,
    [sort_order] int DEFAULT NULL  NULL,
    [last_modified] datetime2(0) DEFAULT NULL  NULL,
    [date_added] datetime2(0)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [use_function] varchar(255) DEFAULT NULL  NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [set_function] varchar(255) DEFAULT NULL  NULL
 )
 GO
@@ -480,11 +702,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'configuration_group' AND sc.name=N'dbo' AND type in (N'U')
@@ -507,18 +729,30 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[configuration_group]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[configuration_group]
 (
    [configuration_group_id] int IDENTITY(16, 1)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [configuration_group_title] varchar(64)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [configuration_group_description] varchar(255)  NOT NULL,
    [sort_order] int DEFAULT NULL  NULL,
    [visible] int DEFAULT '1'  NULL
@@ -532,11 +766,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'counter' AND sc.name=N'dbo' AND type in (N'U')
@@ -559,14 +793,14 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[counter]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[counter]
 (
 
@@ -587,11 +821,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'counter_history' AND sc.name=N'dbo' AND type in (N'U')
@@ -614,14 +848,14 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[counter_history]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[counter_history]
 (
 
@@ -642,11 +876,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'countries' AND sc.name=N'dbo' AND type in (N'U')
@@ -669,18 +903,24 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[countries]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[countries]
 (
    [countries_id] int IDENTITY(240, 1)  NOT NULL,
-   [countries_name] varchar(64)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [countries_name] varchar(255)  NOT NULL,
 
    /*
    *   SSMA informational messages:
@@ -706,11 +946,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'currencies' AND sc.name=N'dbo' AND type in (N'U')
@@ -733,17 +973,23 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[currencies]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[currencies]
 (
    [currencies_id] int IDENTITY(3, 1)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [title] varchar(32)  NOT NULL,
 
    /*
@@ -752,7 +998,19 @@ CREATE TABLE
    */
 
    [code] char(3)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [symbol_left] varchar(12) DEFAULT NULL  NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [symbol_right] varchar(12) DEFAULT NULL  NULL,
 
    /*
@@ -787,11 +1045,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'customers' AND sc.name=N'dbo' AND type in (N'U')
@@ -814,28 +1072,40 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[customers]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[customers]
 (
-   [customers_id] int IDENTITY(2, 1)  NOT NULL,
+   [customers_id] int IDENTITY(3, 1)  NOT NULL,
 
    /*
    *   SSMA informational messages:
    *   M2SS0055: Data type was converted to CHAR according to character set mapping for latin1 character set
    */
 
-   [customers_gender] char(1)  NOT NULL,
-   [customers_firstname] varchar(32)  NOT NULL,
-   [customers_lastname] varchar(32)  NOT NULL,
+   [customers_gender] char(1) DEFAULT NULL  NULL,
 
-   /* 
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [customers_firstname] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [customers_lastname] varchar(255)  NOT NULL,
+
+   /*
    *   SSMA error messages:
    *   M2SS0057: Default clause cannot be converted because the column does not allow NULLs
 
@@ -845,11 +1115,35 @@ CREATE TABLE
 
    */
 
-   [customers_dob] datetime2(0) /* DEFAULT 0  */ NOT NULL,
-   [customers_email_address] varchar(96)  NOT NULL,
+   [customers_dob] datetime2(0) /* DEFAULT NULL  */ NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [customers_email_address] varchar(255)  NOT NULL,
    [customers_default_address_id] int DEFAULT NULL  NULL,
-   [customers_telephone] varchar(32)  NOT NULL,
-   [customers_fax] varchar(32) DEFAULT NULL  NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [customers_telephone] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [customers_fax] varchar(255) DEFAULT NULL  NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [customers_password] varchar(40)  NOT NULL,
 
    /*
@@ -868,11 +1162,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'customers_basket' AND sc.name=N'dbo' AND type in (N'U')
@@ -895,18 +1189,24 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[customers_basket]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[customers_basket]
 (
-   [customers_basket_id] int IDENTITY(1, 1)  NOT NULL,
+   [customers_basket_id] int IDENTITY(4, 1)  NOT NULL,
    [customers_id] int  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [products_id] varchar(255)  NOT NULL,
    [customers_basket_quantity] int  NOT NULL,
    [final_price] decimal(15, 4) DEFAULT NULL  NULL,
@@ -927,11 +1227,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'customers_basket_attributes' AND sc.name=N'dbo' AND type in (N'U')
@@ -954,18 +1254,24 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[customers_basket_attributes]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[customers_basket_attributes]
 (
-   [customers_basket_attributes_id] int IDENTITY(1, 1)  NOT NULL,
+   [customers_basket_attributes_id] int IDENTITY(2, 1)  NOT NULL,
    [customers_id] int  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [products_id] varchar(255)  NOT NULL,
    [products_options_id] int  NOT NULL,
    [products_options_value_id] int  NOT NULL
@@ -979,11 +1285,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'customers_info' AND sc.name=N'dbo' AND type in (N'U')
@@ -1006,14 +1312,14 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[customers_info]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[customers_info]
 (
    [customers_info_id] int  NOT NULL,
@@ -1032,11 +1338,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'geo_zones' AND sc.name=N'dbo' AND type in (N'U')
@@ -1059,18 +1365,30 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[geo_zones]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[geo_zones]
 (
    [geo_zone_id] int IDENTITY(2, 1)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [geo_zone_name] varchar(32)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [geo_zone_description] varchar(255)  NOT NULL,
    [last_modified] datetime2(0) DEFAULT NULL  NULL,
    [date_added] datetime2(0)  NOT NULL
@@ -1084,11 +1402,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'languages' AND sc.name=N'dbo' AND type in (N'U')
@@ -1111,17 +1429,23 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[languages]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[languages]
 (
-   [languages_id] int IDENTITY(4, 1)  NOT NULL,
+   [languages_id] int IDENTITY(2, 1)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [name] varchar(32)  NOT NULL,
 
    /*
@@ -1130,7 +1454,19 @@ CREATE TABLE
    */
 
    [code] char(2)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [image] varchar(64) DEFAULT NULL  NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [directory] varchar(32) DEFAULT NULL  NULL,
    [sort_order] int DEFAULT NULL  NULL
 )
@@ -1143,11 +1479,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'manufacturers' AND sc.name=N'dbo' AND type in (N'U')
@@ -1170,18 +1506,30 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[manufacturers]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[manufacturers]
 (
    [manufacturers_id] int IDENTITY(10, 1)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [manufacturers_name] varchar(32)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [manufacturers_image] varchar(64) DEFAULT NULL  NULL,
    [date_added] datetime2(0) DEFAULT NULL  NULL,
    [last_modified] datetime2(0) DEFAULT NULL  NULL
@@ -1195,11 +1543,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'manufacturers_info' AND sc.name=N'dbo' AND type in (N'U')
@@ -1222,18 +1570,24 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[manufacturers_info]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[manufacturers_info]
 (
    [manufacturers_id] int  NOT NULL,
    [languages_id] int  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [manufacturers_url] varchar(255)  NOT NULL,
    [url_clicked] int DEFAULT '0'  NOT NULL,
    [date_last_click] datetime2(0) DEFAULT NULL  NULL
@@ -1247,11 +1601,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'newsletters' AND sc.name=N'dbo' AND type in (N'U')
@@ -1274,17 +1628,23 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[newsletters]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[newsletters]
 (
    [newsletters_id] int IDENTITY(1, 1)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [title] varchar(255)  NOT NULL,
 
    /*
@@ -1293,6 +1653,12 @@ CREATE TABLE
    */
 
    [content] varchar(max)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [module] varchar(255)  NOT NULL,
    [date_added] datetime2(0)  NOT NULL,
    [date_sent] datetime2(0) DEFAULT NULL  NULL,
@@ -1308,11 +1674,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'orders' AND sc.name=N'dbo' AND type in (N'U')
@@ -1335,51 +1701,237 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[orders]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[orders]
 (
    [orders_id] int IDENTITY(1, 1)  NOT NULL,
    [customers_id] int  NOT NULL,
-   [customers_name] varchar(64)  NOT NULL,
-   [customers_company] varchar(32) DEFAULT NULL  NULL,
-   [customers_street_address] varchar(64)  NOT NULL,
-   [customers_suburb] varchar(32) DEFAULT NULL  NULL,
-   [customers_city] varchar(32)  NOT NULL,
-   [customers_postcode] varchar(10)  NOT NULL,
-   [customers_state] varchar(32) DEFAULT NULL  NULL,
-   [customers_country] varchar(32)  NOT NULL,
-   [customers_telephone] varchar(32)  NOT NULL,
-   [customers_email_address] varchar(96)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [customers_name] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [customers_company] varchar(255) DEFAULT NULL  NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [customers_street_address] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [customers_suburb] varchar(255) DEFAULT NULL  NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [customers_city] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [customers_postcode] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [customers_state] varchar(255) DEFAULT NULL  NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [customers_country] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [customers_telephone] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [customers_email_address] varchar(255)  NOT NULL,
    [customers_address_format_id] int  NOT NULL,
-   [delivery_name] varchar(64)  NOT NULL,
-   [delivery_company] varchar(32) DEFAULT NULL  NULL,
-   [delivery_street_address] varchar(64)  NOT NULL,
-   [delivery_suburb] varchar(32) DEFAULT NULL  NULL,
-   [delivery_city] varchar(32)  NOT NULL,
-   [delivery_postcode] varchar(10)  NOT NULL,
-   [delivery_state] varchar(32) DEFAULT NULL  NULL,
-   [delivery_country] varchar(32)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [delivery_name] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [delivery_company] varchar(255) DEFAULT NULL  NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [delivery_street_address] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [delivery_suburb] varchar(255) DEFAULT NULL  NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [delivery_city] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [delivery_postcode] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [delivery_state] varchar(255) DEFAULT NULL  NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [delivery_country] varchar(255)  NOT NULL,
    [delivery_address_format_id] int  NOT NULL,
-   [billing_name] varchar(64)  NOT NULL,
-   [billing_company] varchar(32) DEFAULT NULL  NULL,
-   [billing_street_address] varchar(64)  NOT NULL,
-   [billing_suburb] varchar(32) DEFAULT NULL  NULL,
-   [billing_city] varchar(32)  NOT NULL,
-   [billing_postcode] varchar(10)  NOT NULL,
-   [billing_state] varchar(32) DEFAULT NULL  NULL,
-   [billing_country] varchar(32)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [billing_name] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [billing_company] varchar(255) DEFAULT NULL  NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [billing_street_address] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [billing_suburb] varchar(255) DEFAULT NULL  NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [billing_city] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [billing_postcode] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [billing_state] varchar(255) DEFAULT NULL  NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [billing_country] varchar(255)  NOT NULL,
    [billing_address_format_id] int  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [payment_method] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [cc_type] varchar(20) DEFAULT NULL  NULL,
-   [cc_owner] varchar(64) DEFAULT NULL  NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [cc_owner] varchar(255) DEFAULT NULL  NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [cc_number] varchar(32) DEFAULT NULL  NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [cc_expires] varchar(4) DEFAULT NULL  NULL,
    [last_modified] datetime2(0) DEFAULT NULL  NULL,
    [date_purchased] datetime2(0) DEFAULT NULL  NULL,
@@ -1403,11 +1955,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'orders_products' AND sc.name=N'dbo' AND type in (N'U')
@@ -1430,20 +1982,32 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[orders_products]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[orders_products]
 (
    [orders_products_id] int IDENTITY(1, 1)  NOT NULL,
    [orders_id] int  NOT NULL,
    [products_id] int  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [products_model] varchar(12) DEFAULT NULL  NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [products_name] varchar(64)  NOT NULL,
    [products_price] decimal(15, 4)  NOT NULL,
    [final_price] decimal(15, 4)  NOT NULL,
@@ -1459,11 +2023,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'orders_products_attributes' AND sc.name=N'dbo' AND type in (N'U')
@@ -1486,20 +2050,32 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[orders_products_attributes]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[orders_products_attributes]
 (
    [orders_products_attributes_id] int IDENTITY(1, 1)  NOT NULL,
    [orders_id] int  NOT NULL,
    [orders_products_id] int  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [products_options] varchar(32)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [products_options_values] varchar(32)  NOT NULL,
    [options_values_price] decimal(15, 4)  NOT NULL,
 
@@ -1519,11 +2095,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'orders_products_download' AND sc.name=N'dbo' AND type in (N'U')
@@ -1546,19 +2122,25 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[orders_products_download]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[orders_products_download]
 (
    [orders_products_download_id] int IDENTITY(1, 1)  NOT NULL,
    [orders_id] int DEFAULT '0'  NOT NULL,
    [orders_products_id] int DEFAULT '0'  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [orders_products_filename] varchar(255) DEFAULT ''  NOT NULL,
    [download_maxdays] int DEFAULT '0'  NOT NULL,
    [download_count] int DEFAULT '0'  NOT NULL
@@ -1572,11 +2154,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'orders_status' AND sc.name=N'dbo' AND type in (N'U')
@@ -1599,18 +2181,24 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[orders_status]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[orders_status]
 (
    [orders_status_id] int DEFAULT '0'  NOT NULL,
    [language_id] int DEFAULT '1'  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [orders_status_name] varchar(32)  NOT NULL,
    [public_flag] int DEFAULT '1'  NULL,
    [downloads_flag] int DEFAULT '0'  NULL
@@ -1624,11 +2212,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'orders_status_history' AND sc.name=N'dbo' AND type in (N'U')
@@ -1651,14 +2239,14 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[orders_status_history]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[orders_status_history]
 (
    [orders_status_history_id] int IDENTITY(1, 1)  NOT NULL,
@@ -1683,11 +2271,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'orders_total' AND sc.name=N'dbo' AND type in (N'U')
@@ -1710,21 +2298,39 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[orders_total]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[orders_total]
 (
    [orders_total_id] bigint IDENTITY(1, 1)  NOT NULL,
    [orders_id] int  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [title] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [text] varchar(255)  NOT NULL,
    [value] decimal(15, 4)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [class] varchar(32)  NOT NULL,
    [sort_order] int  NOT NULL
 )
@@ -1737,11 +2343,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'products' AND sc.name=N'dbo' AND type in (N'U')
@@ -1764,19 +2370,31 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[products]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[products]
 (
    [products_id] int IDENTITY(28, 1)  NOT NULL,
    [products_quantity] int  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [products_model] varchar(12) DEFAULT NULL  NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [products_image] varchar(64) DEFAULT NULL  NULL,
    [products_price] decimal(15, 4)  NOT NULL,
    [products_date_added] datetime2(0)  NOT NULL,
@@ -1797,11 +2415,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'products_attributes' AND sc.name=N'dbo' AND type in (N'U')
@@ -1824,14 +2442,14 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[products_attributes]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[products_attributes]
 (
    [products_attributes_id] int IDENTITY(28, 1)  NOT NULL,
@@ -1856,11 +2474,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'products_attributes_download' AND sc.name=N'dbo' AND type in (N'U')
@@ -1883,17 +2501,23 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[products_attributes_download]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[products_attributes_download]
 (
    [products_attributes_id] int  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [products_attributes_filename] varchar(255) DEFAULT ''  NOT NULL,
    [products_attributes_maxdays] int DEFAULT '0'  NULL,
    [products_attributes_maxcount] int DEFAULT '0'  NULL
@@ -1907,11 +2531,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'products_description' AND sc.name=N'dbo' AND type in (N'U')
@@ -1934,18 +2558,24 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[products_description]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[products_description]
 (
    [products_id] int IDENTITY(28, 1)  NOT NULL,
    [language_id] int DEFAULT '1'  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [products_name] varchar(64) DEFAULT ''  NOT NULL,
 
    /*
@@ -1954,6 +2584,12 @@ CREATE TABLE
    */
 
    [products_description] varchar(max)  NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [products_url] varchar(255) DEFAULT NULL  NULL,
    [products_viewed] int DEFAULT '0'  NULL
 )
@@ -1966,11 +2602,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'products_notifications' AND sc.name=N'dbo' AND type in (N'U')
@@ -1993,14 +2629,14 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[products_notifications]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[products_notifications]
 (
    [products_id] int  NOT NULL,
@@ -2016,11 +2652,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'products_options' AND sc.name=N'dbo' AND type in (N'U')
@@ -2043,18 +2679,24 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[products_options]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[products_options]
 (
    [products_options_id] int DEFAULT '0'  NOT NULL,
    [language_id] int DEFAULT '1'  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [products_options_name] varchar(32) DEFAULT ''  NOT NULL
 )
 GO
@@ -2066,11 +2708,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'products_options_values' AND sc.name=N'dbo' AND type in (N'U')
@@ -2093,18 +2735,24 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[products_options_values]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[products_options_values]
 (
    [products_options_values_id] int DEFAULT '0'  NOT NULL,
    [language_id] int DEFAULT '1'  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [products_options_values_name] varchar(64) DEFAULT ''  NOT NULL
 )
 GO
@@ -2116,11 +2764,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'products_options_values_to_products_options' AND sc.name=N'dbo' AND type in (N'U')
@@ -2143,14 +2791,14 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[products_options_values_to_products_options]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[products_options_values_to_products_options]
 (
    [products_options_values_to_products_options_id] int IDENTITY(14, 1)  NOT NULL,
@@ -2166,11 +2814,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'products_to_categories' AND sc.name=N'dbo' AND type in (N'U')
@@ -2193,14 +2841,14 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[products_to_categories]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[products_to_categories]
 (
    [products_id] int  NOT NULL,
@@ -2215,11 +2863,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'reviews' AND sc.name=N'dbo' AND type in (N'U')
@@ -2242,20 +2890,26 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[reviews]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[reviews]
 (
    [reviews_id] int IDENTITY(2, 1)  NOT NULL,
    [products_id] int  NOT NULL,
    [customers_id] int DEFAULT NULL  NULL,
-   [customers_name] varchar(64)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [customers_name] varchar(255)  NOT NULL,
    [reviews_rating] int DEFAULT NULL  NULL,
    [date_added] datetime2(0) DEFAULT NULL  NULL,
    [last_modified] datetime2(0) DEFAULT NULL  NULL,
@@ -2270,11 +2924,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'reviews_description' AND sc.name=N'dbo' AND type in (N'U')
@@ -2297,14 +2951,14 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[reviews_description]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[reviews_description]
 (
    [reviews_id] int  NOT NULL,
@@ -2319,6 +2973,61 @@ CREATE TABLE
 )
 GO
 
+IF  EXISTS (SELECT * FROM sys.objects so JOIN sys.schemas sc ON so.schema_id = sc.schema_id WHERE so.name = N'sec_directory_whitelist' AND sc.name=N'dbo' AND type in (N'U'))
+BEGIN
+
+  DECLARE @drop_statement varchar(500)
+
+  DECLARE drop_cursor CURSOR FOR
+      SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
+      FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
+      WHERE fk.referenced_object_id =
+          (
+             SELECT so.object_id
+             FROM sys.objects so JOIN sys.schemas sc
+             ON so.schema_id = sc.schema_id
+             WHERE so.name = N'sec_directory_whitelist' AND sc.name=N'dbo' AND type in (N'U')
+           )
+
+  OPEN drop_cursor
+
+  FETCH NEXT FROM drop_cursor
+  INTO @drop_statement
+
+  WHILE @@FETCH_STATUS = 0
+  BEGIN
+     EXEC (@drop_statement)
+
+     FETCH NEXT FROM drop_cursor
+     INTO @drop_statement
+  END
+
+  CLOSE drop_cursor
+  DEALLOCATE drop_cursor
+
+  DROP TABLE [dbo].[sec_directory_whitelist]
+END
+GO
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE
+[dbo].[sec_directory_whitelist]
+(
+   [id] int IDENTITY(13, 1)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [directory] varchar(255)  NOT NULL
+)
+GO
+
 IF  EXISTS (SELECT * FROM sys.objects so JOIN sys.schemas sc ON so.schema_id = sc.schema_id WHERE so.name = N'sessions' AND sc.name=N'dbo' AND type in (N'U'))
 BEGIN
 
@@ -2326,11 +3035,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'sessions' AND sc.name=N'dbo' AND type in (N'U')
@@ -2353,16 +3062,22 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[sessions]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[sessions]
 (
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [sesskey] varchar(32)  NOT NULL,
    [expiry] bigint  NOT NULL,
 
@@ -2382,11 +3097,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'specials' AND sc.name=N'dbo' AND type in (N'U')
@@ -2409,14 +3124,14 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[specials]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[specials]
 (
    [specials_id] int IDENTITY(5, 1)  NOT NULL,
@@ -2437,11 +3152,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'tax_class' AND sc.name=N'dbo' AND type in (N'U')
@@ -2464,18 +3179,30 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[tax_class]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[tax_class]
 (
    [tax_class_id] int IDENTITY(2, 1)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [tax_class_title] varchar(32)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [tax_class_description] varchar(255)  NOT NULL,
    [last_modified] datetime2(0) DEFAULT NULL  NULL,
    [date_added] datetime2(0)  NOT NULL
@@ -2489,11 +3216,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'tax_rates' AND sc.name=N'dbo' AND type in (N'U')
@@ -2516,14 +3243,14 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[tax_rates]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[tax_rates]
 (
    [tax_rates_id] int IDENTITY(2, 1)  NOT NULL,
@@ -2531,6 +3258,12 @@ CREATE TABLE
    [tax_class_id] int  NOT NULL,
    [tax_priority] int DEFAULT '1'  NULL,
    [tax_rate] decimal(7, 4)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [tax_description] varchar(255)  NOT NULL,
    [last_modified] datetime2(0) DEFAULT NULL  NULL,
    [date_added] datetime2(0)  NOT NULL
@@ -2544,11 +3277,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'whos_online' AND sc.name=N'dbo' AND type in (N'U')
@@ -2571,21 +3304,51 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[whos_online]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[whos_online]
 (
    [customer_id] int DEFAULT NULL  NULL,
-   [full_name] varchar(64)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [full_name] varchar(255)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [session_id] varchar(128)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [ip_address] varchar(15)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [time_entry] varchar(14)  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [time_last_click] varchar(14)  NOT NULL,
 
    /*
@@ -2604,11 +3367,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'zones' AND sc.name=N'dbo' AND type in (N'U')
@@ -2631,20 +3394,32 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[zones]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[zones]
 (
    [zone_id] int IDENTITY(182, 1)  NOT NULL,
    [zone_country_id] int  NOT NULL,
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
    [zone_code] varchar(32)  NOT NULL,
-   [zone_name] varchar(32)  NOT NULL
+
+   /*
+   *   SSMA informational messages:
+   *   M2SS0055: Data type was converted to VARCHAR according to character set mapping for latin1 character set
+   */
+
+   [zone_name] varchar(255)  NOT NULL
 )
 GO
 
@@ -2655,11 +3430,11 @@ BEGIN
 
   DECLARE drop_cursor CURSOR FOR
       SELECT 'alter table '+quotename(schema_name(ob.schema_id))+
-      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name) 
+      '.'+quotename(object_name(ob.object_id))+ ' drop constraint ' + quotename(fk.name)
       FROM sys.objects ob INNER JOIN sys.foreign_keys fk ON fk.parent_object_id = ob.object_id
-      WHERE fk.referenced_object_id = 
+      WHERE fk.referenced_object_id =
           (
-             SELECT so.object_id 
+             SELECT so.object_id
              FROM sys.objects so JOIN sys.schemas sc
              ON so.schema_id = sc.schema_id
              WHERE so.name = N'zones_to_geo_zones' AND sc.name=N'dbo' AND type in (N'U')
@@ -2682,14 +3457,14 @@ BEGIN
   DEALLOCATE drop_cursor
 
   DROP TABLE [dbo].[zones_to_geo_zones]
-END 
+END
 GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE 
+CREATE TABLE
 [dbo].[zones_to_geo_zones]
 (
    [association_id] int IDENTITY(2, 1)  NOT NULL,
@@ -2701,6 +3476,20 @@ CREATE TABLE
 )
 GO
 
+IF EXISTS (SELECT * FROM sys.objects so JOIN sys.schemas sc ON so.schema_id = sc.schema_id WHERE so.name = N'PK_action_recorder_id' AND sc.name=N'dbo' AND type in (N'C'))
+ALTER TABLE [dbo].[action_recorder] DROP CONSTRAINT [PK_action_recorder_id]
+ GO
+
+
+
+ALTER TABLE [dbo].[action_recorder]
+ ADD CONSTRAINT [PK_action_recorder_id]
+ PRIMARY KEY
+   CLUSTERED ([id] ASC)
+
+GO
+
+
 IF EXISTS (SELECT * FROM sys.objects so JOIN sys.schemas sc ON so.schema_id = sc.schema_id WHERE so.name = N'PK_address_book_address_book_id' AND sc.name=N'dbo' AND type in (N'C'))
 ALTER TABLE [dbo].[address_book] DROP CONSTRAINT [PK_address_book_address_book_id]
  GO
@@ -2709,7 +3498,7 @@ ALTER TABLE [dbo].[address_book] DROP CONSTRAINT [PK_address_book_address_book_i
 
 ALTER TABLE [dbo].[address_book]
  ADD CONSTRAINT [PK_address_book_address_book_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([address_book_id] ASC)
 
 GO
@@ -2723,7 +3512,7 @@ ALTER TABLE [dbo].[address_format] DROP CONSTRAINT [PK_address_format_address_fo
 
 ALTER TABLE [dbo].[address_format]
  ADD CONSTRAINT [PK_address_format_address_format_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([address_format_id] ASC)
 
 GO
@@ -2737,7 +3526,7 @@ ALTER TABLE [dbo].[administrators] DROP CONSTRAINT [PK_administrators_id]
 
 ALTER TABLE [dbo].[administrators]
  ADD CONSTRAINT [PK_administrators_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([id] ASC)
 
 GO
@@ -2751,7 +3540,7 @@ ALTER TABLE [dbo].[banners] DROP CONSTRAINT [PK_banners_banners_id]
 
 ALTER TABLE [dbo].[banners]
  ADD CONSTRAINT [PK_banners_banners_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([banners_id] ASC)
 
 GO
@@ -2765,7 +3554,7 @@ ALTER TABLE [dbo].[banners_history] DROP CONSTRAINT [PK_banners_history_banners_
 
 ALTER TABLE [dbo].[banners_history]
  ADD CONSTRAINT [PK_banners_history_banners_history_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([banners_history_id] ASC)
 
 GO
@@ -2779,7 +3568,7 @@ ALTER TABLE [dbo].[categories] DROP CONSTRAINT [PK_categories_categories_id]
 
 ALTER TABLE [dbo].[categories]
  ADD CONSTRAINT [PK_categories_categories_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([categories_id] ASC)
 
 GO
@@ -2793,7 +3582,7 @@ ALTER TABLE [dbo].[categories_description] DROP CONSTRAINT [PK_categories_descri
 
 ALTER TABLE [dbo].[categories_description]
  ADD CONSTRAINT [PK_categories_description_categories_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([categories_id] ASC, [language_id] ASC)
 
 GO
@@ -2807,7 +3596,7 @@ ALTER TABLE [dbo].[configuration] DROP CONSTRAINT [PK_configuration_configuratio
 
 ALTER TABLE [dbo].[configuration]
  ADD CONSTRAINT [PK_configuration_configuration_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([configuration_id] ASC)
 
 GO
@@ -2821,7 +3610,7 @@ ALTER TABLE [dbo].[configuration_group] DROP CONSTRAINT [PK_configuration_group_
 
 ALTER TABLE [dbo].[configuration_group]
  ADD CONSTRAINT [PK_configuration_group_configuration_group_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([configuration_group_id] ASC)
 
 GO
@@ -2835,7 +3624,7 @@ ALTER TABLE [dbo].[countries] DROP CONSTRAINT [PK_countries_countries_id]
 
 ALTER TABLE [dbo].[countries]
  ADD CONSTRAINT [PK_countries_countries_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([countries_id] ASC)
 
 GO
@@ -2849,7 +3638,7 @@ ALTER TABLE [dbo].[currencies] DROP CONSTRAINT [PK_currencies_currencies_id]
 
 ALTER TABLE [dbo].[currencies]
  ADD CONSTRAINT [PK_currencies_currencies_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([currencies_id] ASC)
 
 GO
@@ -2863,7 +3652,7 @@ ALTER TABLE [dbo].[customers] DROP CONSTRAINT [PK_customers_customers_id]
 
 ALTER TABLE [dbo].[customers]
  ADD CONSTRAINT [PK_customers_customers_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([customers_id] ASC)
 
 GO
@@ -2877,7 +3666,7 @@ ALTER TABLE [dbo].[customers_basket] DROP CONSTRAINT [PK_customers_basket_custom
 
 ALTER TABLE [dbo].[customers_basket]
  ADD CONSTRAINT [PK_customers_basket_customers_basket_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([customers_basket_id] ASC)
 
 GO
@@ -2891,7 +3680,7 @@ ALTER TABLE [dbo].[customers_basket_attributes] DROP CONSTRAINT [PK_customers_ba
 
 ALTER TABLE [dbo].[customers_basket_attributes]
  ADD CONSTRAINT [PK_customers_basket_attributes_customers_basket_attributes_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([customers_basket_attributes_id] ASC)
 
 GO
@@ -2905,7 +3694,7 @@ ALTER TABLE [dbo].[customers_info] DROP CONSTRAINT [PK_customers_info_customers_
 
 ALTER TABLE [dbo].[customers_info]
  ADD CONSTRAINT [PK_customers_info_customers_info_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([customers_info_id] ASC)
 
 GO
@@ -2919,7 +3708,7 @@ ALTER TABLE [dbo].[geo_zones] DROP CONSTRAINT [PK_geo_zones_geo_zone_id]
 
 ALTER TABLE [dbo].[geo_zones]
  ADD CONSTRAINT [PK_geo_zones_geo_zone_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([geo_zone_id] ASC)
 
 GO
@@ -2933,7 +3722,7 @@ ALTER TABLE [dbo].[languages] DROP CONSTRAINT [PK_languages_languages_id]
 
 ALTER TABLE [dbo].[languages]
  ADD CONSTRAINT [PK_languages_languages_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([languages_id] ASC)
 
 GO
@@ -2947,7 +3736,7 @@ ALTER TABLE [dbo].[manufacturers] DROP CONSTRAINT [PK_manufacturers_manufacturer
 
 ALTER TABLE [dbo].[manufacturers]
  ADD CONSTRAINT [PK_manufacturers_manufacturers_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([manufacturers_id] ASC)
 
 GO
@@ -2961,7 +3750,7 @@ ALTER TABLE [dbo].[manufacturers_info] DROP CONSTRAINT [PK_manufacturers_info_ma
 
 ALTER TABLE [dbo].[manufacturers_info]
  ADD CONSTRAINT [PK_manufacturers_info_manufacturers_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([manufacturers_id] ASC, [languages_id] ASC)
 
 GO
@@ -2975,7 +3764,7 @@ ALTER TABLE [dbo].[newsletters] DROP CONSTRAINT [PK_newsletters_newsletters_id]
 
 ALTER TABLE [dbo].[newsletters]
  ADD CONSTRAINT [PK_newsletters_newsletters_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([newsletters_id] ASC)
 
 GO
@@ -2989,7 +3778,7 @@ ALTER TABLE [dbo].[orders] DROP CONSTRAINT [PK_orders_orders_id]
 
 ALTER TABLE [dbo].[orders]
  ADD CONSTRAINT [PK_orders_orders_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([orders_id] ASC)
 
 GO
@@ -3003,7 +3792,7 @@ ALTER TABLE [dbo].[orders_products] DROP CONSTRAINT [PK_orders_products_orders_p
 
 ALTER TABLE [dbo].[orders_products]
  ADD CONSTRAINT [PK_orders_products_orders_products_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([orders_products_id] ASC)
 
 GO
@@ -3017,7 +3806,7 @@ ALTER TABLE [dbo].[orders_products_attributes] DROP CONSTRAINT [PK_orders_produc
 
 ALTER TABLE [dbo].[orders_products_attributes]
  ADD CONSTRAINT [PK_orders_products_attributes_orders_products_attributes_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([orders_products_attributes_id] ASC)
 
 GO
@@ -3031,7 +3820,7 @@ ALTER TABLE [dbo].[orders_products_download] DROP CONSTRAINT [PK_orders_products
 
 ALTER TABLE [dbo].[orders_products_download]
  ADD CONSTRAINT [PK_orders_products_download_orders_products_download_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([orders_products_download_id] ASC)
 
 GO
@@ -3045,7 +3834,7 @@ ALTER TABLE [dbo].[orders_status] DROP CONSTRAINT [PK_orders_status_orders_statu
 
 ALTER TABLE [dbo].[orders_status]
  ADD CONSTRAINT [PK_orders_status_orders_status_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([orders_status_id] ASC, [language_id] ASC)
 
 GO
@@ -3059,7 +3848,7 @@ ALTER TABLE [dbo].[orders_status_history] DROP CONSTRAINT [PK_orders_status_hist
 
 ALTER TABLE [dbo].[orders_status_history]
  ADD CONSTRAINT [PK_orders_status_history_orders_status_history_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([orders_status_history_id] ASC)
 
 GO
@@ -3073,7 +3862,7 @@ ALTER TABLE [dbo].[orders_total] DROP CONSTRAINT [PK_orders_total_orders_total_i
 
 ALTER TABLE [dbo].[orders_total]
  ADD CONSTRAINT [PK_orders_total_orders_total_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([orders_total_id] ASC)
 
 GO
@@ -3087,7 +3876,7 @@ ALTER TABLE [dbo].[products] DROP CONSTRAINT [PK_products_products_id]
 
 ALTER TABLE [dbo].[products]
  ADD CONSTRAINT [PK_products_products_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([products_id] ASC)
 
 GO
@@ -3101,7 +3890,7 @@ ALTER TABLE [dbo].[products_attributes] DROP CONSTRAINT [PK_products_attributes_
 
 ALTER TABLE [dbo].[products_attributes]
  ADD CONSTRAINT [PK_products_attributes_products_attributes_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([products_attributes_id] ASC)
 
 GO
@@ -3115,7 +3904,7 @@ ALTER TABLE [dbo].[products_attributes_download] DROP CONSTRAINT [PK_products_at
 
 ALTER TABLE [dbo].[products_attributes_download]
  ADD CONSTRAINT [PK_products_attributes_download_products_attributes_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([products_attributes_id] ASC)
 
 GO
@@ -3129,7 +3918,7 @@ ALTER TABLE [dbo].[products_description] DROP CONSTRAINT [PK_products_descriptio
 
 ALTER TABLE [dbo].[products_description]
  ADD CONSTRAINT [PK_products_description_products_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([products_id] ASC, [language_id] ASC)
 
 GO
@@ -3143,7 +3932,7 @@ ALTER TABLE [dbo].[products_notifications] DROP CONSTRAINT [PK_products_notifica
 
 ALTER TABLE [dbo].[products_notifications]
  ADD CONSTRAINT [PK_products_notifications_products_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([products_id] ASC, [customers_id] ASC)
 
 GO
@@ -3157,7 +3946,7 @@ ALTER TABLE [dbo].[products_options] DROP CONSTRAINT [PK_products_options_produc
 
 ALTER TABLE [dbo].[products_options]
  ADD CONSTRAINT [PK_products_options_products_options_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([products_options_id] ASC, [language_id] ASC)
 
 GO
@@ -3171,7 +3960,7 @@ ALTER TABLE [dbo].[products_options_values] DROP CONSTRAINT [PK_products_options
 
 ALTER TABLE [dbo].[products_options_values]
  ADD CONSTRAINT [PK_products_options_values_products_options_values_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([products_options_values_id] ASC, [language_id] ASC)
 
 GO
@@ -3185,7 +3974,7 @@ ALTER TABLE [dbo].[products_options_values_to_products_options] DROP CONSTRAINT 
 
 ALTER TABLE [dbo].[products_options_values_to_products_options]
  ADD CONSTRAINT [PK_products_options_values_to_products_options_products_options_values_to_products_options_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([products_options_values_to_products_options_id] ASC)
 
 GO
@@ -3199,7 +3988,7 @@ ALTER TABLE [dbo].[products_to_categories] DROP CONSTRAINT [PK_products_to_categ
 
 ALTER TABLE [dbo].[products_to_categories]
  ADD CONSTRAINT [PK_products_to_categories_products_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([products_id] ASC, [categories_id] ASC)
 
 GO
@@ -3213,7 +4002,7 @@ ALTER TABLE [dbo].[reviews] DROP CONSTRAINT [PK_reviews_reviews_id]
 
 ALTER TABLE [dbo].[reviews]
  ADD CONSTRAINT [PK_reviews_reviews_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([reviews_id] ASC)
 
 GO
@@ -3227,8 +4016,22 @@ ALTER TABLE [dbo].[reviews_description] DROP CONSTRAINT [PK_reviews_description_
 
 ALTER TABLE [dbo].[reviews_description]
  ADD CONSTRAINT [PK_reviews_description_reviews_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([reviews_id] ASC, [languages_id] ASC)
+
+GO
+
+
+IF EXISTS (SELECT * FROM sys.objects so JOIN sys.schemas sc ON so.schema_id = sc.schema_id WHERE so.name = N'PK_sec_directory_whitelist_id' AND sc.name=N'dbo' AND type in (N'C'))
+ALTER TABLE [dbo].[sec_directory_whitelist] DROP CONSTRAINT [PK_sec_directory_whitelist_id]
+ GO
+
+
+
+ALTER TABLE [dbo].[sec_directory_whitelist]
+ ADD CONSTRAINT [PK_sec_directory_whitelist_id]
+ PRIMARY KEY
+   CLUSTERED ([id] ASC)
 
 GO
 
@@ -3241,7 +4044,7 @@ ALTER TABLE [dbo].[sessions] DROP CONSTRAINT [PK_sessions_sesskey]
 
 ALTER TABLE [dbo].[sessions]
  ADD CONSTRAINT [PK_sessions_sesskey]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([sesskey] ASC)
 
 GO
@@ -3255,7 +4058,7 @@ ALTER TABLE [dbo].[specials] DROP CONSTRAINT [PK_specials_specials_id]
 
 ALTER TABLE [dbo].[specials]
  ADD CONSTRAINT [PK_specials_specials_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([specials_id] ASC)
 
 GO
@@ -3269,7 +4072,7 @@ ALTER TABLE [dbo].[tax_class] DROP CONSTRAINT [PK_tax_class_tax_class_id]
 
 ALTER TABLE [dbo].[tax_class]
  ADD CONSTRAINT [PK_tax_class_tax_class_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([tax_class_id] ASC)
 
 GO
@@ -3283,7 +4086,7 @@ ALTER TABLE [dbo].[tax_rates] DROP CONSTRAINT [PK_tax_rates_tax_rates_id]
 
 ALTER TABLE [dbo].[tax_rates]
  ADD CONSTRAINT [PK_tax_rates_tax_rates_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([tax_rates_id] ASC)
 
 GO
@@ -3297,7 +4100,7 @@ ALTER TABLE [dbo].[zones] DROP CONSTRAINT [PK_zones_zone_id]
 
 ALTER TABLE [dbo].[zones]
  ADD CONSTRAINT [PK_zones_zone_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([zone_id] ASC)
 
 GO
@@ -3311,7 +4114,7 @@ ALTER TABLE [dbo].[zones_to_geo_zones] DROP CONSTRAINT [PK_zones_to_geo_zones_as
 
 ALTER TABLE [dbo].[zones_to_geo_zones]
  ADD CONSTRAINT [PK_zones_to_geo_zones_association_id]
- PRIMARY KEY 
+ PRIMARY KEY
    CLUSTERED ([association_id] ASC)
 
 GO
@@ -3322,14 +4125,74 @@ IF  EXISTS (
        ON so.object_id = si.object_id
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
+       WHERE so.name = N'action_recorder' AND sc.name = N'dbo' AND si.name = N'idx_action_recorder_date_added' AND so.type in (N'U'))
+   DROP INDEX [dbo].[action_recorder].[idx_action_recorder_date_added]
+GO
+CREATE NONCLUSTERED INDEX [idx_action_recorder_date_added] ON [dbo].[action_recorder]
+(
+   [date_added] ASC
+)
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
+GO
+
+IF  EXISTS (
+       SELECT * FROM sys.objects  so JOIN sys.indexes si
+       ON so.object_id = si.object_id
+       JOIN sys.schemas sc
+       ON so.schema_id = sc.schema_id
+       WHERE so.name = N'action_recorder' AND sc.name = N'dbo' AND si.name = N'idx_action_recorder_identifier' AND so.type in (N'U'))
+   DROP INDEX [dbo].[action_recorder].[idx_action_recorder_identifier]
+GO
+CREATE NONCLUSTERED INDEX [idx_action_recorder_identifier] ON [dbo].[action_recorder]
+(
+   [identifier] ASC
+)
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
+GO
+
+IF  EXISTS (
+       SELECT * FROM sys.objects  so JOIN sys.indexes si
+       ON so.object_id = si.object_id
+       JOIN sys.schemas sc
+       ON so.schema_id = sc.schema_id
+       WHERE so.name = N'action_recorder' AND sc.name = N'dbo' AND si.name = N'idx_action_recorder_module' AND so.type in (N'U'))
+   DROP INDEX [dbo].[action_recorder].[idx_action_recorder_module]
+GO
+CREATE NONCLUSTERED INDEX [idx_action_recorder_module] ON [dbo].[action_recorder]
+(
+   [module] ASC
+)
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
+GO
+
+IF  EXISTS (
+       SELECT * FROM sys.objects  so JOIN sys.indexes si
+       ON so.object_id = si.object_id
+       JOIN sys.schemas sc
+       ON so.schema_id = sc.schema_id
+       WHERE so.name = N'action_recorder' AND sc.name = N'dbo' AND si.name = N'idx_action_recorder_user_id' AND so.type in (N'U'))
+   DROP INDEX [dbo].[action_recorder].[idx_action_recorder_user_id]
+GO
+CREATE NONCLUSTERED INDEX [idx_action_recorder_user_id] ON [dbo].[action_recorder]
+(
+   [user_id] ASC
+)
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
+GO
+
+IF  EXISTS (
+       SELECT * FROM sys.objects  so JOIN sys.indexes si
+       ON so.object_id = si.object_id
+       JOIN sys.schemas sc
+       ON so.schema_id = sc.schema_id
        WHERE so.name = N'address_book' AND sc.name = N'dbo' AND si.name = N'idx_address_book_customers_id' AND so.type in (N'U'))
-   DROP INDEX [dbo].[address_book].[idx_address_book_customers_id] 
+   DROP INDEX [dbo].[address_book].[idx_address_book_customers_id]
 GO
 CREATE NONCLUSTERED INDEX [idx_address_book_customers_id] ON [dbo].[address_book]
 (
    [customers_id] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
 
 IF  EXISTS (
@@ -3338,13 +4201,13 @@ IF  EXISTS (
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
        WHERE so.name = N'banners' AND sc.name = N'dbo' AND si.name = N'idx_banners_group' AND so.type in (N'U'))
-   DROP INDEX [dbo].[banners].[idx_banners_group] 
+   DROP INDEX [dbo].[banners].[idx_banners_group]
 GO
 CREATE NONCLUSTERED INDEX [idx_banners_group] ON [dbo].[banners]
 (
    [banners_group] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
 
 IF  EXISTS (
@@ -3353,13 +4216,13 @@ IF  EXISTS (
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
        WHERE so.name = N'banners_history' AND sc.name = N'dbo' AND si.name = N'idx_banners_history_banners_id' AND so.type in (N'U'))
-   DROP INDEX [dbo].[banners_history].[idx_banners_history_banners_id] 
+   DROP INDEX [dbo].[banners_history].[idx_banners_history_banners_id]
 GO
 CREATE NONCLUSTERED INDEX [idx_banners_history_banners_id] ON [dbo].[banners_history]
 (
    [banners_id] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
 
 IF  EXISTS (
@@ -3368,13 +4231,13 @@ IF  EXISTS (
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
        WHERE so.name = N'categories_description' AND sc.name = N'dbo' AND si.name = N'idx_categories_name' AND so.type in (N'U'))
-   DROP INDEX [dbo].[categories_description].[idx_categories_name] 
+   DROP INDEX [dbo].[categories_description].[idx_categories_name]
 GO
 CREATE NONCLUSTERED INDEX [idx_categories_name] ON [dbo].[categories_description]
 (
    [categories_name] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
 
 IF  EXISTS (
@@ -3383,13 +4246,13 @@ IF  EXISTS (
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
        WHERE so.name = N'categories' AND sc.name = N'dbo' AND si.name = N'idx_categories_parent_id' AND so.type in (N'U'))
-   DROP INDEX [dbo].[categories].[idx_categories_parent_id] 
+   DROP INDEX [dbo].[categories].[idx_categories_parent_id]
 GO
 CREATE NONCLUSTERED INDEX [idx_categories_parent_id] ON [dbo].[categories]
 (
    [parent_id] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
 
 IF  EXISTS (
@@ -3398,13 +4261,13 @@ IF  EXISTS (
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
        WHERE so.name = N'countries' AND sc.name = N'dbo' AND si.name = N'IDX_COUNTRIES_NAME' AND so.type in (N'U'))
-   DROP INDEX [dbo].[countries].[IDX_COUNTRIES_NAME] 
+   DROP INDEX [dbo].[countries].[IDX_COUNTRIES_NAME]
 GO
 CREATE NONCLUSTERED INDEX [IDX_COUNTRIES_NAME] ON [dbo].[countries]
 (
    [countries_name] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
 
 IF  EXISTS (
@@ -3413,13 +4276,13 @@ IF  EXISTS (
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
        WHERE so.name = N'currencies' AND sc.name = N'dbo' AND si.name = N'idx_currencies_code' AND so.type in (N'U'))
-   DROP INDEX [dbo].[currencies].[idx_currencies_code] 
+   DROP INDEX [dbo].[currencies].[idx_currencies_code]
 GO
 CREATE NONCLUSTERED INDEX [idx_currencies_code] ON [dbo].[currencies]
 (
    [code] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
 
 IF  EXISTS (
@@ -3428,13 +4291,13 @@ IF  EXISTS (
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
        WHERE so.name = N'customers_basket_attributes' AND sc.name = N'dbo' AND si.name = N'idx_customers_basket_att_customers_id' AND so.type in (N'U'))
-   DROP INDEX [dbo].[customers_basket_attributes].[idx_customers_basket_att_customers_id] 
+   DROP INDEX [dbo].[customers_basket_attributes].[idx_customers_basket_att_customers_id]
 GO
 CREATE NONCLUSTERED INDEX [idx_customers_basket_att_customers_id] ON [dbo].[customers_basket_attributes]
 (
    [customers_id] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
 
 IF  EXISTS (
@@ -3443,13 +4306,13 @@ IF  EXISTS (
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
        WHERE so.name = N'customers_basket' AND sc.name = N'dbo' AND si.name = N'idx_customers_basket_customers_id' AND so.type in (N'U'))
-   DROP INDEX [dbo].[customers_basket].[idx_customers_basket_customers_id] 
+   DROP INDEX [dbo].[customers_basket].[idx_customers_basket_customers_id]
 GO
 CREATE NONCLUSTERED INDEX [idx_customers_basket_customers_id] ON [dbo].[customers_basket]
 (
    [customers_id] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
 
 IF  EXISTS (
@@ -3458,13 +4321,13 @@ IF  EXISTS (
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
        WHERE so.name = N'customers' AND sc.name = N'dbo' AND si.name = N'idx_customers_email_address' AND so.type in (N'U'))
-   DROP INDEX [dbo].[customers].[idx_customers_email_address] 
+   DROP INDEX [dbo].[customers].[idx_customers_email_address]
 GO
 CREATE NONCLUSTERED INDEX [idx_customers_email_address] ON [dbo].[customers]
 (
    [customers_email_address] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
 
 IF  EXISTS (
@@ -3473,13 +4336,13 @@ IF  EXISTS (
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
        WHERE so.name = N'languages' AND sc.name = N'dbo' AND si.name = N'IDX_LANGUAGES_NAME' AND so.type in (N'U'))
-   DROP INDEX [dbo].[languages].[IDX_LANGUAGES_NAME] 
+   DROP INDEX [dbo].[languages].[IDX_LANGUAGES_NAME]
 GO
 CREATE NONCLUSTERED INDEX [IDX_LANGUAGES_NAME] ON [dbo].[languages]
 (
    [name] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
 
 IF  EXISTS (
@@ -3488,13 +4351,13 @@ IF  EXISTS (
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
        WHERE so.name = N'manufacturers' AND sc.name = N'dbo' AND si.name = N'IDX_MANUFACTURERS_NAME' AND so.type in (N'U'))
-   DROP INDEX [dbo].[manufacturers].[IDX_MANUFACTURERS_NAME] 
+   DROP INDEX [dbo].[manufacturers].[IDX_MANUFACTURERS_NAME]
 GO
 CREATE NONCLUSTERED INDEX [IDX_MANUFACTURERS_NAME] ON [dbo].[manufacturers]
 (
    [manufacturers_name] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
 
 IF  EXISTS (
@@ -3503,13 +4366,13 @@ IF  EXISTS (
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
        WHERE so.name = N'orders' AND sc.name = N'dbo' AND si.name = N'idx_orders_customers_id' AND so.type in (N'U'))
-   DROP INDEX [dbo].[orders].[idx_orders_customers_id] 
+   DROP INDEX [dbo].[orders].[idx_orders_customers_id]
 GO
 CREATE NONCLUSTERED INDEX [idx_orders_customers_id] ON [dbo].[orders]
 (
    [customers_id] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
 
 IF  EXISTS (
@@ -3518,13 +4381,13 @@ IF  EXISTS (
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
        WHERE so.name = N'orders_products_attributes' AND sc.name = N'dbo' AND si.name = N'idx_orders_products_att_orders_id' AND so.type in (N'U'))
-   DROP INDEX [dbo].[orders_products_attributes].[idx_orders_products_att_orders_id] 
+   DROP INDEX [dbo].[orders_products_attributes].[idx_orders_products_att_orders_id]
 GO
 CREATE NONCLUSTERED INDEX [idx_orders_products_att_orders_id] ON [dbo].[orders_products_attributes]
 (
    [orders_id] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
 
 IF  EXISTS (
@@ -3533,13 +4396,13 @@ IF  EXISTS (
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
        WHERE so.name = N'orders_products_download' AND sc.name = N'dbo' AND si.name = N'idx_orders_products_download_orders_id' AND so.type in (N'U'))
-   DROP INDEX [dbo].[orders_products_download].[idx_orders_products_download_orders_id] 
+   DROP INDEX [dbo].[orders_products_download].[idx_orders_products_download_orders_id]
 GO
 CREATE NONCLUSTERED INDEX [idx_orders_products_download_orders_id] ON [dbo].[orders_products_download]
 (
    [orders_id] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
 
 IF  EXISTS (
@@ -3548,13 +4411,13 @@ IF  EXISTS (
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
        WHERE so.name = N'orders_products' AND sc.name = N'dbo' AND si.name = N'idx_orders_products_orders_id' AND so.type in (N'U'))
-   DROP INDEX [dbo].[orders_products].[idx_orders_products_orders_id] 
+   DROP INDEX [dbo].[orders_products].[idx_orders_products_orders_id]
 GO
 CREATE NONCLUSTERED INDEX [idx_orders_products_orders_id] ON [dbo].[orders_products]
 (
    [orders_id] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
 
 IF  EXISTS (
@@ -3563,13 +4426,13 @@ IF  EXISTS (
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
        WHERE so.name = N'orders_products' AND sc.name = N'dbo' AND si.name = N'idx_orders_products_products_id' AND so.type in (N'U'))
-   DROP INDEX [dbo].[orders_products].[idx_orders_products_products_id] 
+   DROP INDEX [dbo].[orders_products].[idx_orders_products_products_id]
 GO
 CREATE NONCLUSTERED INDEX [idx_orders_products_products_id] ON [dbo].[orders_products]
 (
    [products_id] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
 
 IF  EXISTS (
@@ -3578,13 +4441,13 @@ IF  EXISTS (
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
        WHERE so.name = N'orders_status_history' AND sc.name = N'dbo' AND si.name = N'idx_orders_status_history_orders_id' AND so.type in (N'U'))
-   DROP INDEX [dbo].[orders_status_history].[idx_orders_status_history_orders_id] 
+   DROP INDEX [dbo].[orders_status_history].[idx_orders_status_history_orders_id]
 GO
 CREATE NONCLUSTERED INDEX [idx_orders_status_history_orders_id] ON [dbo].[orders_status_history]
 (
    [orders_id] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
 
 IF  EXISTS (
@@ -3593,13 +4456,13 @@ IF  EXISTS (
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
        WHERE so.name = N'orders_status' AND sc.name = N'dbo' AND si.name = N'idx_orders_status_name' AND so.type in (N'U'))
-   DROP INDEX [dbo].[orders_status].[idx_orders_status_name] 
+   DROP INDEX [dbo].[orders_status].[idx_orders_status_name]
 GO
 CREATE NONCLUSTERED INDEX [idx_orders_status_name] ON [dbo].[orders_status]
 (
    [orders_status_name] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
 
 IF  EXISTS (
@@ -3608,13 +4471,13 @@ IF  EXISTS (
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
        WHERE so.name = N'orders_total' AND sc.name = N'dbo' AND si.name = N'idx_orders_total_orders_id' AND so.type in (N'U'))
-   DROP INDEX [dbo].[orders_total].[idx_orders_total_orders_id] 
+   DROP INDEX [dbo].[orders_total].[idx_orders_total_orders_id]
 GO
 CREATE NONCLUSTERED INDEX [idx_orders_total_orders_id] ON [dbo].[orders_total]
 (
    [orders_id] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
 
 IF  EXISTS (
@@ -3623,13 +4486,13 @@ IF  EXISTS (
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
        WHERE so.name = N'products_attributes' AND sc.name = N'dbo' AND si.name = N'idx_products_attributes_products_id' AND so.type in (N'U'))
-   DROP INDEX [dbo].[products_attributes].[idx_products_attributes_products_id] 
+   DROP INDEX [dbo].[products_attributes].[idx_products_attributes_products_id]
 GO
 CREATE NONCLUSTERED INDEX [idx_products_attributes_products_id] ON [dbo].[products_attributes]
 (
    [products_id] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
 
 IF  EXISTS (
@@ -3638,13 +4501,13 @@ IF  EXISTS (
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
        WHERE so.name = N'products' AND sc.name = N'dbo' AND si.name = N'idx_products_date_added' AND so.type in (N'U'))
-   DROP INDEX [dbo].[products].[idx_products_date_added] 
+   DROP INDEX [dbo].[products].[idx_products_date_added]
 GO
 CREATE NONCLUSTERED INDEX [idx_products_date_added] ON [dbo].[products]
 (
    [products_date_added] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
 
 IF  EXISTS (
@@ -3653,13 +4516,13 @@ IF  EXISTS (
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
        WHERE so.name = N'products' AND sc.name = N'dbo' AND si.name = N'idx_products_model' AND so.type in (N'U'))
-   DROP INDEX [dbo].[products].[idx_products_model] 
+   DROP INDEX [dbo].[products].[idx_products_model]
 GO
 CREATE NONCLUSTERED INDEX [idx_products_model] ON [dbo].[products]
 (
    [products_model] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
 
 IF  EXISTS (
@@ -3668,13 +4531,13 @@ IF  EXISTS (
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
        WHERE so.name = N'reviews' AND sc.name = N'dbo' AND si.name = N'idx_reviews_customers_id' AND so.type in (N'U'))
-   DROP INDEX [dbo].[reviews].[idx_reviews_customers_id] 
+   DROP INDEX [dbo].[reviews].[idx_reviews_customers_id]
 GO
 CREATE NONCLUSTERED INDEX [idx_reviews_customers_id] ON [dbo].[reviews]
 (
    [customers_id] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
 
 IF  EXISTS (
@@ -3683,13 +4546,13 @@ IF  EXISTS (
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
        WHERE so.name = N'reviews' AND sc.name = N'dbo' AND si.name = N'idx_reviews_products_id' AND so.type in (N'U'))
-   DROP INDEX [dbo].[reviews].[idx_reviews_products_id] 
+   DROP INDEX [dbo].[reviews].[idx_reviews_products_id]
 GO
 CREATE NONCLUSTERED INDEX [idx_reviews_products_id] ON [dbo].[reviews]
 (
    [products_id] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
 
 IF  EXISTS (
@@ -3698,13 +4561,13 @@ IF  EXISTS (
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
        WHERE so.name = N'specials' AND sc.name = N'dbo' AND si.name = N'idx_specials_products_id' AND so.type in (N'U'))
-   DROP INDEX [dbo].[specials].[idx_specials_products_id] 
+   DROP INDEX [dbo].[specials].[idx_specials_products_id]
 GO
 CREATE NONCLUSTERED INDEX [idx_specials_products_id] ON [dbo].[specials]
 (
    [products_id] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
 
 IF  EXISTS (
@@ -3713,13 +4576,13 @@ IF  EXISTS (
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
        WHERE so.name = N'zones' AND sc.name = N'dbo' AND si.name = N'idx_zones_country_id' AND so.type in (N'U'))
-   DROP INDEX [dbo].[zones].[idx_zones_country_id] 
+   DROP INDEX [dbo].[zones].[idx_zones_country_id]
 GO
 CREATE NONCLUSTERED INDEX [idx_zones_country_id] ON [dbo].[zones]
 (
    [zone_country_id] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
 
 IF  EXISTS (
@@ -3728,13 +4591,13 @@ IF  EXISTS (
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
        WHERE so.name = N'zones_to_geo_zones' AND sc.name = N'dbo' AND si.name = N'idx_zones_to_geo_zones_country_id' AND so.type in (N'U'))
-   DROP INDEX [dbo].[zones_to_geo_zones].[idx_zones_to_geo_zones_country_id] 
+   DROP INDEX [dbo].[zones_to_geo_zones].[idx_zones_to_geo_zones_country_id]
 GO
 CREATE NONCLUSTERED INDEX [idx_zones_to_geo_zones_country_id] ON [dbo].[zones_to_geo_zones]
 (
    [zone_country_id] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
 
 IF  EXISTS (
@@ -3743,20 +4606,17 @@ IF  EXISTS (
        JOIN sys.schemas sc
        ON so.schema_id = sc.schema_id
        WHERE so.name = N'products_description' AND sc.name = N'dbo' AND si.name = N'products_name' AND so.type in (N'U'))
-   DROP INDEX [dbo].[products_description].[products_name] 
+   DROP INDEX [dbo].[products_description].[products_name]
 GO
 CREATE NONCLUSTERED INDEX [products_name] ON [dbo].[products_description]
 (
    [products_name] ASC
 )
-WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY] 
+WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF) ON [PRIMARY]
 GO
-
---# data
-
-SET IDENTITY_INSERT address_book ON; 
+SET IDENTITY_INSERT address_book ON;
 INSERT INTO address_book ([address_book_id], [customers_id], [entry_gender],[entry_company],[entry_firstname],[entry_lastname],[entry_street_address],[entry_suburb],[entry_postcode],[entry_city],[entry_state],[entry_country_id],[entry_zone_id]) VALUES ( '1', '1', 'm', 'ACME Inc.', 'John', 'Doe', '1 Way Street', '', '12345', 'NeverNever', '', '223', '12');
-SET IDENTITY_INSERT address_book OFF; 
+SET IDENTITY_INSERT address_book OFF;
 GO
 
 --# 1 - Default, 2 - USA, 3 - Spain, 4 - Singapore, 5 - Germany
@@ -3769,12 +4629,12 @@ INSERT INTO address_format ([address_format_id], [address_format], [address_summ
 SET IDENTITY_INSERT address_format OFF;
 GO
 
-SET IDENTITY_INSERT banners ON; 
+SET IDENTITY_INSERT banners ON;
 INSERT INTO banners ([banners_id], [banners_title], [banners_url], [banners_image], [banners_group], [banners_html_text], [expires_impressions], [expires_date], [date_scheduled], [date_added], [date_status_change], [status]) VALUES (1, 'osCommerce', 'http://www.oscommerce.com', 'banners/oscommerce.gif', '468x50', '', 0, null, null, getdate(), null, 1);
-SET IDENTITY_INSERT banners OFF; 
+SET IDENTITY_INSERT banners OFF;
 GO
 
-SET IDENTITY_INSERT categories ON; 
+SET IDENTITY_INSERT categories ON;
 INSERT INTO categories ([categories_id], [categories_image], [parent_id], [sort_order], [date_added], [last_modified]) VALUES ('1', 'category_hardware.gif', '0', '1', getdate(), null);
 INSERT INTO categories ([categories_id], [categories_image], [parent_id], [sort_order], [date_added], [last_modified]) VALUES ('2', 'category_software.gif', '0', '2', getdate(), null);
 INSERT INTO categories ([categories_id], [categories_image], [parent_id], [sort_order], [date_added], [last_modified]) VALUES ('3', 'category_dvd_movies.gif', '0', '3', getdate(), null);
@@ -3795,7 +4655,7 @@ INSERT INTO categories ([categories_id], [categories_image], [parent_id], [sort_
 INSERT INTO categories ([categories_id], [categories_image], [parent_id], [sort_order], [date_added], [last_modified]) VALUES ('18', 'subcategory_simulation.gif', '2', '0', getdate(), null);
 INSERT INTO categories ([categories_id], [categories_image], [parent_id], [sort_order], [date_added], [last_modified]) VALUES ('19', 'subcategory_action_games.gif', '2', '0', getdate(), null);
 INSERT INTO categories ([categories_id], [categories_image], [parent_id], [sort_order], [date_added], [last_modified]) VALUES ('20', 'subcategory_strategy.gif', '2', '0', getdate(), null);
-SET IDENTITY_INSERT categories OFF; 
+SET IDENTITY_INSERT categories OFF;
 GO
 
 INSERT INTO categories_description VALUES ( '1', '1', 'Hardware');
@@ -3826,10 +4686,10 @@ INSERT INTO categories_description VALUES ( '5', '2', 'Drucker');
 INSERT INTO categories_description VALUES ( '6', '2', 'Bildschirme');
 INSERT INTO categories_description VALUES ( '7', '2', 'Lautsprecher');
 INSERT INTO categories_description VALUES ( '8', '2', 'Tastaturen');
-INSERT INTO categories_description VALUES ( '9', '2', 'Mäuse');
+INSERT INTO categories_description VALUES ( '9', '2', 'M?use');
 INSERT INTO categories_description VALUES ( '10', '2', 'Action');
 INSERT INTO categories_description VALUES ( '11', '2', 'Science Fiction');
-INSERT INTO categories_description VALUES ( '12', '2', 'Komödie');
+INSERT INTO categories_description VALUES ( '12', '2', 'Kom?die');
 INSERT INTO categories_description VALUES ( '13', '2', 'Zeichentrick');
 INSERT INTO categories_description VALUES ( '14', '2', 'Thriller');
 INSERT INTO categories_description VALUES ( '15', '2', 'Drama');
@@ -4021,8 +4881,6 @@ INSERT INTO configuration (configuration_title, configuration_key, configuration
 INSERT INTO configuration (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, set_function, date_added) VALUES ('Check IP Address', 'SESSION_CHECK_IP_ADDRESS', 'false', 'Validate the clients IP address on every page request.', '15', '5', 'tep_cfg_select_option(array("true", "false"), ', getdate());
 INSERT INTO configuration (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, set_function, date_added) VALUES ('Prevent Spider Sessions', 'SESSION_BLOCK_SPIDERS', 'true', 'Prevent known spiders from starting a session.', '15', '6', 'tep_cfg_select_option(array("true", "false"), ', getdate());
 INSERT INTO configuration (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, set_function, date_added) VALUES ('Recreate Session', 'SESSION_RECREATE', 'true', 'Recreate the session to generate a new session ID when the customer logs on or creates an account (PHP >=4.1 needed).', '15', '7', 'tep_cfg_select_option(array("true", "false"), ', getdate());
-INSERT INTO configuration (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, date_added) VALUES ('Last Update Check Time', 'LAST_UPDATE_CHECK_TIME', '', 'Last time a check for new versions of osCommerce was run', '6', '0', getdate());
-
 GO
 
 SET IDENTITY_INSERT configuration_group ON;
@@ -4303,8 +5161,8 @@ GO
 
 SET IDENTITY_INSERT languages ON;
 INSERT INTO languages ([languages_id], [name], [code], [image], [directory], [sort_order]) VALUES (1,'English','en','icon.gif','english',1);
-INSERT INTO languages ([languages_id], [name], [code], [image], [directory], [sort_order]) VALUES (2,'Deutsch','de','icon.gif','german',2);
-INSERT INTO languages ([languages_id], [name], [code], [image], [directory], [sort_order]) VALUES (3,'Español','es','icon.gif','espanol',3);
+--INSERT INTO languages ([languages_id], [name], [code], [image], [directory], [sort_order]) VALUES (2,'Deutsch','de','icon.gif','german',2);
+--INSERT INTO languages ([languages_id], [name], [code], [image], [directory], [sort_order]) VALUES (3,'Espa?ol','es','icon.gif','espanol',3);
 SET IDENTITY_INSERT languages OFF;
 GO
 
@@ -4420,33 +5278,33 @@ INSERT INTO products_description ([products_id], [language_id], [products_name],
 INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (25,1,'Microsoft Internet Keyboard PS/2','The Internet Keyboard has 10 Hot Keys on a comfortable standard keyboard design that also includes a detachable palm rest. The Hot Keys allow you to browse the web, or check e-mail directly from your keyboard. The IntelliType Pro software also allows you to customize your hot keys - make the Internet Keyboard work the way you want it to!','',0);
 INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (26,1,'Microsoft IntelliMouse Explorer','Microsoft introduces its most advanced mouse, the IntelliMouse Explorer! IntelliMouse Explorer features a sleek design, an industrial-silver finish, a glowing red underside and taillight, creating a style and look unlike any other mouse. IntelliMouse Explorer combines the accuracy and reliability of Microsoft IntelliEye optical tracking technology, the convenience of two new customizable function buttons, the efficiency of the scrolling wheel and the comfort of expert ergonomic design. All these great features make this the best mouse for the PC!','www.microsoft.com/hardware/mouse/explorer.asp',0);
 INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (27,1,'Hewlett Packard LaserJet 1100Xi','HP has always set the pace in laser printing technology. The new generation HP LaserJet 1100 series sets another impressive pace, delivering a stunning 8 pages per minute print speed. The 600 dpi print resolution with HP''s Resolution Enhancement technology (REt) makes every document more professional.<br><br>Enhanced print speed and laser quality results are just the beginning. With 2MB standard memory, HP LaserJet 1100xi users will be able to print increasingly complex pages. Memory can be increased to 18MB to tackle even more complex documents with ease. The HP LaserJet 1100xi supports key operating systems including Windows 3.1, 3.11, 95, 98, NT 4.0, OS/2 and DOS. Network compatibility available via the optional HP JetDirect External Print Servers.<br><br>HP LaserJet 1100xi also features The Document Builder for the Web Era from Trellix Corp. (featuring software to create Web documents).','www.pandi.hp.com/pandi-db/prodinfo.main?product=laserjet1100',0);
-INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (1,2,'Matrox G200 MMS','<b>Unterstützung für zwei bzw. vier analoge oder digitale Monitore</b><br><br>\r\nDie Matrox G200 Multi-Monitor-Serie führt die bewährte Matrox Tradition im Multi-Monitor- Bereich fort und bietet flexible und fortschrittliche Lösungen.Matrox stellt als erstes Unternehmen einen vierfachen digitalen PanelLink® DVI Flachbildschirm Ausgang zur Verfügung. Mit den optional erhältlichen TV Tuner und Video-Capture Möglichkeiten stellt die Matrox G200 MMS eine alles umfassende Mehrschirm-Lösung dar.<br><br>\r\n<b>Leistungsmerkmale:</b>\r\n<ul>\r\n<li>Preisgekrönter Matrox G200 128-Bit Grafikchip</li>\r\n<li>Schneller 8 MB SGRAM-Speicher pro Kanal</li>\r\n<li>Integrierter, leistungsstarker 250 MHz RAMDAC</li>\r\n<li>Unterstützung für bis zu 16 Bildschirme über 4 Quad-Karten (unter Win NT,ab Treiber 4.40)</li>\r\n<li>Unterstützung von 9 Monitoren unter Win 98</li>\r\n<li>2 bzw. 4 analoge oder digitale Ausgabekanäle pro PCI-Karte</li>\r\n<li>Desktop-Darstellung von 1800 x 1440 oder 1920 x 1200 pro Chip</li>\r\n<li>Anschlußmöglichkeit an einen 15-poligen VGA-Monitor oder an einen 30-poligen digitalen DVI-Flachbildschirm plus integriertem Composite-Video-Eingang (bei der TV-Version)</li>\r\n<li>PCI Grafikkarte, kurze Baulänge</li>\r\n<li>Treiberunterstützung: Windows® 2000, Windows NT® und Windows® 98</li>\r\n<li>Anwendungsbereiche: Börsenumgebung mit zeitgleich großem Visualisierungsbedarf, Videoüberwachung, Video-Conferencing</li>\r\n</ul>','www.matrox.com/mga/deutsch/products/g200_mms/home.cfm',0);
-INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (2,2,'Matrox G400 32 MB','<b>Neu! Matrox G400 &quot;all inclusive&quot; und vieles mehr...</b><br><br>\r\nDie neue Millennium G400-Serie - Hochleistungsgrafik mit dem sensationellen Unterschied. Ausgestattet mit dem neu eingeführten Matrox G400 Grafikchip, bietet die Millennium G400-Serie eine überragende Beschleunigung inklusive bisher nie dagewesener Bildqualitat und enorm flexibler Darstellungsoptionen bei allen Ihren 3D-, 2D- und DVD-Anwendungen.<br><br>\r\n<ul>\r\n<li>DualHead Display und TV-Ausgang</li>\r\n<li>Environment Mapped Bump Mapping</li>\r\n<li>Matrox G400 256-Bit DualBus</li>\r\n<li>3D Rendering Array Prozessor</li>\r\n<li>Vibrant Color Quality² (VCQ²)</li>\r\n<li>UltraSharp DAC</li>\r\n</ul>\r\n<i>&quot;Bleibt abschließend festzustellen, daß die Matrox Millennium G400 Max als Allroundkarte für den Highend-PC derzeit unerreicht ist. Das ergibt den Testsieg und unsere wärmste Empfehlung.&quot;</i><br>\r\n<b>GameStar 8/99 (S.184)</b>','www.matrox.com/mga/deutsch/products/mill_g400/home.cfm',0);
-INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (3,2,'Microsoft IntelliMouse Pro','Die IntelliMouse Pro hat mit der IntelliRad-Technologie einen neuen Standard gesetzt. Anwenderfreundliche Handhabung und produktiveres Arbeiten am PC zeichnen die IntelliMouse aus. Die gewölbte Oberseite paßt sich natürlich in die Handfläche ein, die geschwungene Form erleichtert das Bedienen der Maus. Sie ist sowohl für Rechts- wie auch für Linkshänder geeignet. Mit dem Rad der IntelliMouse kann der Anwender einfach und komfortabel durch Dokumente navigieren.<br><br>\r\n<b>Eigenschaften:</b>\r\n<ul>\r\n<li><b>ANSCHLUSS:</b> PS/2</li>\r\n<li><b>FARBE:</b> weiß</li>\r\n<li><b>TECHNIK:</b> Mauskugel</li>\r\n<li><b>TASTEN:</b> 3 (incl. Scrollrad)</li>\r\n<li><b>SCROLLRAD:</b> Ja</li>\r\n</ul>','',0);
-INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (4,2,'Die Ersatzkiller','Originaltitel: &quot;The Replacement Killers&quot;<br><br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 80 minutes.<br>\r\nAußerdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\n(USA 1998). Til Schweiger schießt auf Hongkong-Star Chow Yun-Fat (&quot;Anna und der König&quot;) ­ ein Fehler ...','www.replacement-killers.com',0);
-INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (5,2,'Blade Runner - Director''s Cut','Regional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 112 minutes.<br>\r\nAußerdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\n<b>Sci-Fi-Klassiker, USA 1983, 112 Min.</b><br><br>\r\nLos Angeles ist im Jahr 2019 ein Hexenkessel. Dauerregen und Smog tauchen den überbevölkerten Moloch in ewige Dämmerung. Polizeigleiter schwirren durch die Luft und überwachen das grelle Ethnogemisch, das sich am Fuße 400stöckiger Stahlbeton-Pyramiden tummelt. Der abgehalfterte Ex-Cop und \"Blade Runner\" Rick Deckard ist Spezialist für die Beseitigung von Replikanten, künstlichen Menschen, geschaffen für harte Arbeit auf fremden Planeten. Nur ihm kann es gelingen, vier flüchtige, hochintelligente \"Nexus 6\"-Spezialmodelle zu stellen. Die sind mit ihrem starken und brandgefährlichen Anführer Batty auf der Suche nach ihrem Schöpfer. Er soll ihnen eine längere Lebenszeit schenken. Das muß Rick Deckard verhindern.  Als sich der eiskalte Jäger in Rachel, die Sekretärin seines Auftraggebers, verliebt, gerät sein Weltbild jedoch ins Wanken. Er entdeckt, daß sie - vielleicht wie er selbst - ein Replikant ist ...<br><br>\r\nDie Konfrontation des Menschen mit \"Realität\" und \"Virtualität\" und das verstrickte Spiel mit getürkten Erinnerungen zieht sich als roter Faden durch das Werk von Autor Philip K. Dick (\"Die totale Erinnerung\"). Sein Roman \"Träumen Roboter von elektrischen Schafen?\" liefert die Vorlage für diesen doppelbödigen Thriller, der den Zuschauer mit faszinierenden\r\nZukunftsvisionen und der gigantischen Kulisse des Großstadtmolochs gefangen nimmt.','www.bladerunner.com',0);
-INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (6,2,'Matrix','Originaltitel: &quot;The Matrix&quot;<br><br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 136 minuten.<br>\r\nAußerdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\n(USA 1999) Der Geniestreich der Wachowski-Brüder. In dieser technisch perfekten Utopie kämpft Hacker Keanu Reeves gegen die Diktatur der Maschinen...','www.whatisthematrix.com',0);
-INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (7,2,'e-m@il für Dich','Original: &quot;You''ve got mail&quot;<br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 112 minutes.<br>\r\nAußerdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\n(USA 1998) von Nora Ephron (&qout;Schlaflos in Seattle&quot;). Meg Ryan und Tom Hanks knüpfen per E-Mail zarte Bande. Dass sie sich schon kennen, ahnen sie nicht ...','www.youvegotmail.com',0);
-INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (8,2,'Das Große Krabbeln','Originaltitel: &quot;A Bug''s Life&quot;<br><br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 96 minuten.<br>\r\nAußerdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\n(USA 1998). Ameise Flik zettelt einen Aufstand gegen gefräßige Grashüpfer an ... Eine fantastische Computeranimation des \"Toy Story\"-Teams. ','www.abugslife.com',0);
-INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (9,2,'Alarmstufe: Rot','Originaltitel: &quot;Under Siege&quot;<br><br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 96 minuten.<br>\r\nAußerdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\n<b>Actionthriller. Smutje Steven Seagal versalzt Schurke Tommy Lee Jones die Suppe</b><br><br>\r\nKatastrophe ahoi: Kurz vor Ausmusterung der \"U.S.S. Missouri\" kapert die High-tech-Bande von Ex-CIA-Agent Strannix (Tommy Lee Jones) das Schlachtschiff. Strannix will die Nuklearraketen des Kreuzers klauen und verscherbeln. Mit Hilfe des irren Ersten Offiziers Krill (lustig: Gary Busey) killen die Gangster den Käpt’n und sperren seine Crew unter Deck. Blöd, dass sie dabei Schiffskoch Rybak (Steven Seagal) vergessen. Der Ex-Elitekämpfer knipst einen Schurken nach dem anderen aus. Eine Verbündete findet er in Stripperin Jordan (Ex-\"Baywatch\"-Biene Erika Eleniak). Die sollte eigentlich aus Käpt’ns Geburtstagstorte hüpfen ... Klar: Seagal ist kein Edelmime. Dafür ist Regisseur Andrew Davis (\"Auf der Flucht\") ein Könner: Er würzt die Action-Orgie mit Ironie und nutzt die imposante Schiffskulisse voll aus. Für Effekte und Ton gab es 1993 Oscar-Nominierungen. ','',0);
-INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (10,2,'Alarmstufe: Rot 2','Originaltitel: &quot;Under Siege 2: Dark Territory&quot;<br><br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 96 minuten.<br>\r\nAußerdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\n(USA ’95). Von einem gekaperten Zug aus übernimmt Computerspezi Dane die Kontrolle über einen Kampfsatelliten und erpresst das Pentagon. Aber auch Ex-Offizier Ryback (Steven Seagal) ist im Zug ...\r\n','',0);
-INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (11,2,'Fire Down Below','Regional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 96 minuten.<br>\r\nAußerdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\nEin mysteriöser Mordfall führt den Bundesmarschall Jack Taggert in eine Kleinstadt im US-Staat Kentucky. Doch bei seinen Ermittlungen stößt er auf eine Mauer des Schweigens. Angst beherrscht die Stadt, und alle Spuren führen zu dem undurchsichtigen Minen-Tycoon Orin Hanner. Offenbar werden in der friedlichen Berglandschaft gigantische Mengen Giftmülls verschoben, mit unkalkulierbaren Risiken. Um eine Katastrophe zu verhindern, räumt Taggert gnadenlos auf ...','',0);
-INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (12,2,'Stirb Langsam - Jetzt Erst Recht','Originaltitel: &quot;Die Hard With A Vengeance&quot;<br><br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 96 minuten.<br>\r\nAußerdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\nSo explosiv, so spannend, so rasant wie nie zuvor: Bruce Willis als Detectiv John McClane in einem Action-Thriller der Superlative! Das ist heute nicht McClanes Tag. Seine Frau hat ihn verlassen, sein Boß hat ihn vom Dienst suspendiert und irgendein Verrückter hat ihn gerade zum Gegenspieler in einem teuflischen Spiel erkoren - und der Einsatz ist New York selbst. Ein Kaufhaus ist explodiert, doch das ist nur der Auftakt. Der geniale Superverbrecher Simon droht, die ganze Stadt Stück für Stück in die Luft zu sprengen, wenn McClane und sein Partner wider Willen seine explosiven\" Rätsel nicht lösen. Eine mörderische Hetzjagd quer durch New York beginnt - bis McClane merkt, daß der Bombenterror eigentlich nur ein brillantes Ablenkungsmanöver ist...!<br><i>\"Perfekt gemacht und stark besetzt. Das Action-Highlight des Jahres!\"</i> <b>(Bild)</b>','',0);
-INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (13,2,'Zwei stahlharte Profis','Originaltitel: &quot;Lethal Weapon&quot;<br><br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 96 minuten.<br>\r\nAußerdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\nSie sind beide Cops in L.A.. Sie haben beide in Vietnam für eine Spezialeinheit gekämpft. Und sie hassen es beide, mit einem Partner arbeiten zu müssen. Aber sie sind Partner: Martin Riggs, der Mann mit dem Todeswunsch, für wen auch immer. Und Roger Murtaugh, der besonnene Polizist. Gemeinsam enttarnen sie einen gigantischen Heroinschmuggel, hinter dem sich eine Gruppe ehemaliger CIA-Söldner verbirgt. Eine Killerbande gegen zwei Profis ...','',0);
-INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (14,2,'Labyrinth ohne Ausweg','Originaltitel: &quot;Red Corner&quot;<br><br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 96 minuten.<br>\r\nAußerdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\nDem Amerikaner Jack Moore wird in China der bestialische Mord an einem Fotomodel angehängt. Brutale Gefängnisschergen versuchen, ihn durch Folter zu einem Geständnis zu zwingen. Vor Gericht fordert die Anklage die Todesstrafe - Moore''s Schicksal scheint besiegelt. Durch einen Zufall gelingt es ihm, aus der Haft zu fliehen, doch aus der feindseligen chinesischen Hauptstadt gibt es praktisch kein Entkommen ...','',0);
-INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (15,2,'Frantic','Originaltitel: &quot;Frantic&quot;<br><br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 96 minuten.<br>\r\nAußerdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\nEin romantischer Urlaub in Paris, der sich in einen Alptraum verwandelt. Ein Mann auf der verzweifelten Suche nach seiner entführten Frau. Ein düster-bedrohliches Paris, in dem nur ein Mensch Licht in die tödliche Affäre bringen kann.','',0);
-INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (16,2,'Mut Zur Wahrheit','Originaltitel: &quot;Courage Under Fire&quot;<br><br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 96 minuten.<br>\r\nAußerdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\nLieutenant Colonel Nathaniel Serling (Denzel Washington) lässt während einer Schlacht im Golfkrieg versehentlich auf einen US-Panzer schießen, dessen Mannschaft dabei ums Leben kommt. Ein Jahr nach diesem Vorfall wird Serling, der mittlerweile nach Washington D.C. versetzt wurde, die Aufgabe übertragen, sich um einen Kandidaten zu kümmern, der während des Krieges starb und dem der höchste militärische Orden zuteil werden soll. Allerdings sind sowohl der Fall und als auch der betreffende Soldat ein politisch heißes Eisen -- Captain Karen Walden (Meg Ryan) ist Amerikas erster weiblicher Soldat, der im Kampf getötet wurde.<br><br>\r\nSerling findet schnell heraus, dass es im Fall des im felsigen Gebiet von Kuwait abgestürzten Rettungshubschraubers Diskrepanzen gibt. In Flashbacks werden von unterschiedlichen Personen verschiedene Versionen von Waldens Taktik, die Soldaten zu retten und den Absturz zu überleben, dargestellt (à la Kurosawas Rashomon). Genau wie in Glory erweist sich Regisseur Edward Zwicks Zusammenstellung von bekannten und unbekannten Schauspielern als die richtige Mischung. Waldens Crew ist besonders überzeugend. Matt Damon als der Sanitäter kommt gut als der leichtfertige Typ rüber, als er Washington seine Geschichte erzählt. Im Kampf ist er ein mit Fehlern behafteter, humorvoller Soldat.<br><br>\r\nDie erstaunlichste Arbeit in Mut zur Wahrheit leistet Lou Diamond Phillips (als der Schütze der Gruppe), dessen Karriere sich auf dem Weg in die direkt für den Videomarkt produzierten Filme befand. Und dann ist da noch Ryan. Sie hat sich in dramatischen Filmen in der Vergangenheit gut behauptet (Eine fast perfekte Liebe, Ein blutiges Erbe), es aber nie geschafft, ihrem Image zu entfliehen, das sie in die Ecke der romantischen Komödie steckte. Mit gefärbtem Haar, einem leichten Akzent und der von ihr geforderten Darstellungskunst hat sie endlich einen langlebigen dramatischen Film. Obwohl sie nur halb so oft wie Washington im Film zu sehen ist, macht ihre mutige und beeindruckend nachhaltige Darstellung Mut zur Wahrheit zu einem speziellen Film bis hin zu dessen seltsamer, aber lohnender letzter Szene.','',0);
-INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (17,2,'Speed','Originaltitel: &quot;Speed&quot;<br><br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 96 minuten.<br>\r\nAußerdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\nEr ist ein Cop aus der Anti-Terror-Einheit von Los Angeles. Und so ist der Alarm für Jack Traven nichts Ungewöhnliches: Ein Terrorist will drei Millionen Dollar erpressen, oder die zufälligen Geiseln in einem Aufzug fallen 35 Stockwerke in die Tiefe. Doch Jack schafft das Unmögliche - die Geiseln werden gerettet und der Terrorist stirbt an seiner eigenen Bombe. Scheinbar. Denn schon wenig später steht Jack (Keanu Reeves) dem Bombenexperten Payne erneut gegenüber. Diesmal hat sich der Erpresser eine ganz perfide Mordwaffe ausgedacht: Er plaziert eine Bombe in einem öffentlichen Bus. Der Mechanismus der Sprengladung schaltet sich automatisch ein, sobald der Bus schneller als 50 Meilen in der Stunde fährt und detoniert sofort, sobald die Geschwindigkeit sinkt. Plötzlich wird für eine Handvoll ahnungsloser Durchschnittsbürger der Weg zur Arbeit zum Höllentrip - und nur Jack hat ihr Leben in der Hand. Als der Busfahrer verletzt wird, übernimmt Fahrgast Annie (Sandra Bullock) das Steuer. Doch wohin mit einem Bus, der nicht bremsen kann in der Stadt der Staus? Doch es kommt noch schlimmer: Payne (Dennis Hopper) will jetzt nicht nur seine drei Millionen Dollar. Er will Jack. Um jeden Preis.','',0);
-INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (18,2,'Speed 2: Cruise Control','Originaltitel: &quot;Speed 2 - Cruise Control&quot;<br><br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 96 minuten.<br>\r\nAußerdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\nHalten Sie ihre Schwimmwesten bereit, denn die actiongeladene Fortsetzung von Speed begibt sich auf Hochseekurs. Erleben Sie Sandra Bullock erneut in ihrer Star-Rolle als Annie Porter. Die Karibik-Kreuzfahrt mit ihrem Freund Alex entwickelt sich unaufhaltsam zur rasenden Todesfahrt, als ein wahnsinniger Computer-Spezialist den Luxusliner in seine Gewalt bringt und auf einen mörderischen Zerstörungskurs programmiert. Eine hochexplosive Reise, bei der kein geringerer als Action-Spezialist Jan De Bont das Ruder in die Hand nimmt. Speed 2: Cruise Controll läßt ihre Adrenalin-Wellen in rasender Geschwindigkeit ganz nach oben schnellen.','',0);
-INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (19,2,'Verrückt nach Mary','Originaltitel: &quot;There''s Something About Mary&quot;<br><br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 96 minuten.<br>\r\nAußerdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\n13 Jahre nachdem Teds Rendezvous mit seiner angebeteten Mary in einem peinlichen Fiasko endete, träumt er immer noch von ihr und engagiert den windigen Privatdetektiv Healy um sie aufzuspüren. Der findet Mary in Florida und verliebt sich auf den ersten Blick in die atemberaubende Traumfrau. Um Ted als Nebenbuhler auszuschalten, tischt er ihm dicke Lügen über Mary auf. Ted läßt sich jedoch nicht abschrecken, eilt nach Miami und versucht nun alles, um Healy die Balztour zu vermasseln. Doch nicht nur Healy ist verrückt nach Mary und Ted bekommt es mit einer ganzen Legion liebeskranker Konkurrenten zu tun ...','',0);
-INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (20,2,'Menschenkind','Originaltitel: &quot;Beloved&quot;<br><br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 96 minuten.<br>\r\nAußerdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\nDieser vielschichtige Film ist eine Arbeit, die Regisseur Jonathan Demme und dem amerikanischen Talkshow-Star Oprah Winfrey sehr am Herzen lag. Der Film deckt im Verlauf seiner dreistündigen Spielzeit viele Bereiche ab. Menschenkind ist teils Sklavenepos, teils Mutter-Tochter-Drama und teils Geistergeschichte.<br><br>\r\nDer Film fordert vom Publikum höchste Aufmerksamkeit, angefangen bei seiner dramatischen und etwas verwirrenden Eingangssequenz, in der die Bewohner eines Hauses von einem niederträchtigen übersinnlichen Angriff heimgesucht werden. Aber Demme und seine talentierte Besetzung bereiten denen, die dabei bleiben ein unvergessliches Erlebnis. Der Film folgt den Spuren von Sethe (in ihren mittleren Jahren von Oprah Winfrey dargestellt), einer ehemaligen Sklavin, die sich scheinbar ein friedliches und produktives Leben in Ohio aufgebaut hat. Aber durch den erschreckenden und sparsamen Einsatz von Rückblenden deckt Demme, genau wie das literarische Meisterwerk von Toni Morrison, auf dem der Film basiert, langsam die Schrecken von Sethes früherem Leben auf und das schreckliche Ereignis, dass dazu führte, dass Sethes Haus von Geistern heimgesucht wird.<br><br>\r\nWährend die Gräuel der Sklaverei und das blutige Ereignis in Sethes Familie unleugbar tief beeindrucken, ist die Qualität des Film auch in kleineren, genauso befriedigenden Details sichtbar. Die geistlich beeinflusste Musik von Rachel Portman ist gleichzeitig befreiend und bedrückend, und der Einblick in die afro-amerikanische Gemeinschaft nach der Sklaverei -- am Beispiel eines Familienausflugs zu einem Jahrmarkt, oder dem gospelsingenden Nähkränzchen -- machen diesen Film zu einem speziellen Vergnügen sowohl für den Geist als auch für das Herz. Die Schauspieler, besonders Kimberley Elise als Sethes kämpfende Tochter und Thandie Newton als der mysteriöse Titelcharakter, sind sehr rührend. Achten Sie auch auf Danny Glover (Lethal Weapon) als Paul D.','',0);
-INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (21,2,'SWAT 3: Elite Edition','<b>KEINE KOMPROMISSE!</b><br><i>Kämpfen Sie Seite an Seite mit Ihren LAPD SWAT-Kameraden gegen das organisierte Verbrechen!</i><br><br>\r\nEine der realistischsten 3D-Taktiksimulationen der letzten Zeit jetzt mit Multiplayer-Modus, 5 neuen Missionen und jede Menge nützliche Tools!<br><br>\r\nLos Angeles, 2005. In wenigen Tagen steht die Unterzeichnung des Abkommens der Vereinten Nationen zur Atom-Ächtung durch Vertreter aller Nationen der Welt an. Radikale terroristische Vereinigungen machen sich in der ganzen Stadt breit. Verantwortlich für die Sicherheit der Delegierten zeichnet sich eine Eliteeinheit der LAPD: das SWAT-Team. Das Schicksal der Stadt liegt in Ihren Händen.<br><br>\r\n<b>Neue Features:</b>\r\n<ul>\r\n<li>Multiplayer-Modus (Co op-Modus, Deathmatch in den bekannten Variationen)</li>\r\n<li>5 neue Missionen an original Örtlichkeiten Las (U-Bahn, Whitman Airport, etc.)</li>\r\n<li>neue Charakter</li>\r\n<li>neue Skins</li>\r\n<li>neue Waffen</li>\r\n<li>neue Sounds</li>\r\n<li>verbesserte KI</li>\r\n<li>Tools-Package</li>\r\n<li>Scenario-Editor</li>\r\n<li>Level-Editor</li>\r\n</ul>\r\nDie dritte Folge der Bestseller-Reihe im Bereich der 3D-Echtzeit-Simulationen präsentiert sich mit einer neuen Spielengine mit extrem ausgeprägtem Realismusgrad. Der Spieler übernimmt das Kommando über eine der besten Polizei-Spezialeinheiten oder einer der übelsten Terroristen-Gangs der Welt. Er durchläuft - als \"Guter\" oder \"Böser\" - eine der härtesten und elitärsten Kampfausbildungen, in der er lernt, mit jeder Art von Krisensituationen umzugehen. Bei diesem Action-Abenteuer geht es um das Leben prominenter Vertreter der Vereinten Nationen und bei 16 Missionen an Originalschauplätzen in LA gibt die \"lebensechte\" KI den Protagonisten jeder Seite so einige harte Nüsse zu knacken.','www.swat3.com',0);
-INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (22,2,'Unreal Tournament','2341: Die Gewalt ist eine Lebensweise, die sich ihren Weg durch die dunklen Risse der Gesellschaft bahnt. Sie bedroht die Macht und den Einfluss der regierenden Firmen, die schnellstens ein Mittel finden müssen, die tobenden Massen zu besänftigen - ein profitables Mittel ... Gladiatorenkämpfe sind die Lösung. Sie sollen den Durst der Menschen nach Blut stillen und sind die perfekte Gelegenheit, die Aufständischen, Kriminellen und Aliens zu beseitigen, die die Firmenelite bedrohen.<br><br>\r\nDas Turnier war geboren - ein Kampf auf Leben und Tod. Galaxisweit live und in Farbe! Kämpfen Sie für Freiheit, Ruhm und Ehre. Sie müssen stark, schnell und geschickt sein ... oder Sie bleiben auf der Strecke.<br><br>\r\nKämpfen Sie allein oder kommandieren Sie ein Team gegen Armeen unbarmherziger Krieger, die alle nur ein Ziel vor Augen haben: Die Arenen lebend zu verlassen und sich dem Grand Champion zu stellen ... um ihn dann zu bezwingen!<br><br>\r\n<b>Features:</b>\r\n<ul>\r\n<li>Auf dem PC mehrfach als Spiel des Jahres ausgezeichnet!</li>\r\n<li>Mehr als 50 faszinierende Level - verlassene Raumstationen, gotische Kathedralen und graffitibedeckte Großstädte.</li>\r\n<li>Vier actionreiche Spielmodi - Deathmatch, Capture the Flag, Assault und Domination werden Ihren Adrenalinpegel in die Höhe schnellen lassen.</li>\r\n<li>Dramatische Mehrspieler-Kämpfe mit 2, 3 und 4 Spielern, auch über das Netzwerk</li>\r\n<li>Gnadenlos aggressive Computergegner verlangen Ihnen das Äußerste ab.</li>\r\n<li>Neuartiges Benutzerinterface und verbesserte Steuerung - auch mit USB-Maus und -Tastatur spielbar.</li>\r\n</ul>\r\nDer Nachfolger des Actionhits \"Unreal\" verspricht ein leichtes, intuitives Interface, um auch Einsteigern schnellen Zugang zu den Duellen gegen die Bots zu ermöglichen. Mit diesen KI-Kriegern kann man auch Teams bilden und im umfangreichen Multiplayermodus ohne Onlinekosten in den Kampf ziehen. 35 komplett neue Arenen und das erweiterte Waffenangebot bilden dazu den würdigen Rahmen.','www.unrealtournament.net',0);
-INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (23,2,'The Wheel Of Time','<b><i>\"Wheel Of Time\"(Das Rad der Zeit)</i></b> basiert auf den Fantasy-Romanen von Kultautor Robert Jordan und stellt einen einzigartigen Mix aus Strategie-, Action- und Rollenspielelementen dar. Obwohl die Welt von \"Wheel of Time\" eng an die literarische Vorlage der Romane angelehnt ist, erzählt das Spiel keine lineare Geschichte. Die Story entwickelt sich abhängig von den Aktionen der Spieler, die jeweils die Rollen der Hauptcharaktere aus dem Roman übernehmen. Jede Figur hat den Oberbefehl über eine große Gefolgschaft, militärische Einheiten und Ländereien. Die Spieler können ihre eigenen Festungen konstruieren, individuell ausbauen, von dort aus das umliegende Land erforschen, magische Gegenstände sammeln oder die gegnerischen Zitadellen erstürmen. Selbstverständlich kann man sich auch über LAN oder Internet gegenseitig Truppen auf den Hals hetzen und die Festungen seiner Mitspieler in Schutt und Asche legen. Dreh- und Anlegepunkt von \"Wheel of Time\" ist der Kampf um die finstere Macht \"The Dark One\", die vor langer Zeit die Menschheit beinahe ins Verderben stürzte und nur mit Hilfe gewaltiger magischer Energie verbannt werden konnte. \"The Amyrlin Seat\" und \"The Children of the Night\" kämpfen nur gegen \"The Forsaken\" und \"The Hound\" um den Besitz des Schlüssels zu \"Shayol Ghul\" - dem magischen Siegel, mit dessen Hilfe \"The Dark One\" seinerzeit gebannt werden konnte.<br><br>\r\n<b>Features:</b> \r\n<ul>\r\n<li>Ego-Shooter mit Strategie-Elementen</li>\r\n<li>Spielumgebung in Echtzeit-3D</li>\r\n<li>Konstruktion aud Ausbau der eigenen Festung</li>\r\n<li>Einsatz von über 100 Artefakten und Zaubersprüchen</li>\r\n<li>Single- und Multiplayermodus</li>\r\n</ul>\r\nIm Mittelpunkt steht der Kampf gegen eine finstere Macht namens The Dark One. Deren Schergen müssen mit dem Einsatz von über 100 Artefakten und Zaubereien wie Blitzschlag oder Teleportation aus dem Weg geräumt werden. Die opulente 3D-Grafik verbindet Strategie- und Rollenspielelemente. \r\n\r\n<b>Voraussetzungen</b>\r\nmind. P200, 32MB RAM, 4x CD-Rom, Win95/98, DirectX 5.0 komp.Grafikkarte und Soundkarte. ','www.wheeloftime.com',0);
-INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (24,2,'Disciples: Sacred Land','Rundenbasierende Fantasy/RTS-Strategie mit gutem Design (vor allem die Levels, 4 versch. Rassen, tolle Einheiten), fantastischer Atmosphäre und exzellentem Soundtrack. Grafisch leider auf das Niveau von 1990.','www.strategyfirst.com/disciples/welcome.html',0);
-INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (25,2,'Microsoft Internet Tastatur PS/2','<i>Microsoft Internet Keyboard,Windows-Tastatur mit 10 zusätzl. Tasten,2 selbst programmierbar, abnehmbareHandgelenkauflage. Treiber im Lieferumfang.</i><br><br>\r\nEin-Klick-Zugriff auf das Internet und vieles mehr! Das Internet Keyboard verfügt über 10 zusätzliche Abkürzungstasten auf einer benutzerfreundlichen Standardtastatur, die darüber hinaus eine abnehmbare Handballenauflage aufweist. Über die Abkürzungstasten können Sie durch das Internet surfen oder direkt von der Tastatur aus auf E-Mails zugreifen. Die IntelliType Pro-Software ermöglicht außerdem das individuelle Belegen der Tasten.','',0);
-INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (26,2,'Microsof IntelliMouse Explorer','Die IntelliMouse Explorer überzeugt durch ihr modernes Design mit silberfarbenem Gehäuse, sowie rot schimmernder Unter- und Rückseite. Die neuartige IntelliEye-Technologie sorgt für eine noch nie dagewesene Präzision, da statt der beweglichen Teile (zum Abtasten der Bewegungsänderungen an der Unterseite der Maus) ein optischer Sensor die Bewegungen der Maus erfaßt. Das Herzstück der Microsoft IntelliEye-Technologie ist ein kleiner Chip, der einen optischen Sensor und einen digitalen Signalprozessor (DSP) enthält.<br><br>\r\nDa auf bewegliche Teile, die Staub, Schmutz und Fett aufnehmen können, verzichtet wurde, muß die IntelliMouse Explorer nicht mehr gereinigt werden. Darüber hinaus arbeitet die IntelliMouse Explorer auf nahezu jeder Arbeitsoberfläche, so daß kein Mauspad mehr erforderlich ist. Mit dem Rad und zwei neuen zusätzlichen Maustasten ermöglicht sie effizientes und komfortables Arbeiten am PC.<br><br>\r\n<b>Eigenschaften:</b>\r\n<ul>\r\n<li><b>ANSCHLUSS:</b> USB (PS/2-Adapter enthalten)</li>\r\n<li><b>FARBE:</b> metallic-grau</li>\r\n<li><b>TECHNIK:</b> Optisch (Akt.: ca. 1500 Bilder/s)</li>\r\n<li><b>TASTEN:</b> 5 (incl. Scrollrad)</li>\r\n<li><b>SCROLLRAD:</b> Ja</li>\r\n</ul>\r\n<i><b>BEMERKUNG:</b><br>Keine Reinigung bewegter Teile mehr notwendig, da statt der Mauskugel ein Fotoempfänger benutzt wird.</i>','',0);
-INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (27,2,'Hewlett-Packard LaserJet 1100Xi','<b>HP LaserJet für mehr Produktivität und Flexibilität am Arbeitsplatz</b><br><br>\r\nDer HP LaserJet 1100Xi Drucker verbindet exzellente Laserdruckqualität mit hoher Geschwindigkeit für mehr Effizienz.<br><br>\r\n<b>Zielkunden</b>\r\n<ul><li>Einzelanwender, die Wert auf professionelle Ausdrucke in Laserqualität legen und schnelle Ergebnisse auch bei komplexen Dokumenten erwarten.</li>\r\n<li>Der HP LaserJet 1100 sorgt mit gestochen scharfen Texten und Grafiken für ein professionelles Erscheinungsbild Ihrer Arbeit und Ihres Unternehmens. Selbst bei komplexen Dokumenten liefert er schnelle Ergebnisse. Andere Medien - wie z.B. Transparentfolien und Briefumschläge, etc. - lassen sich problemlos bedrucken. Somit ist der HP LaserJet 1100 ein Multifunktionstalent im Büroalltag.</li>\r\n</ul>\r\n<b>Eigenschaften</b>\r\n<ul>\r\n<li><b>Druckqualität</b> Schwarzweiß: 600 x 600 dpi</li>\r\n<li><b>Monatliche Druckleistung</b> Bis zu 7000 Seiten</li>\r\n<li><b>Speicher</b> 2 MB Standardspeicher, erweiterbar auf 18 MB</li>\r\n<li><b>Schnittstelle/gemeinsame Nutzung</b> Parallel, IEEE 1284-kompatibel</li>\r\n<li><b>Softwarekompatibilität</b> DOS/Win 3.1x/9x/NT 4.0</li>\r\n<li><b>Papierzuführung</b> 125-Blatt-Papierzuführung</li>\r\n<li><b>Druckmedien</b> Normalpapier, Briefumschläge, Transparentfolien, kartoniertes Papier, Postkarten und Etiketten</li>\r\n<li><b>Netzwerkfähig</b> Über HP JetDirect PrintServer</li>\r\n<li><b>Lieferumfang</b> HP LaserJet 1100Xi Drucker (Lieferumfang: Drucker, Tonerkassette, 2 m Parallelkabel, Netzkabel, Kurzbedienungsanleitung, Benutzerhandbuch, CD-ROM, 3,5\"-Disketten mit Windows® 3.1x, 9x, NT 4.0 Treibern und DOS-Dienstprogrammen)</li>\r\n<li><b>Gewährleistung</b> Ein Jahr</li>\r\n</ul>\r\n','www.hp.com',0);
+INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (1,2,'Matrox G200 MMS','<b>Unterst?tzung f?r zwei bzw. vier analoge oder digitale Monitore</b><br><br>\r\nDie Matrox G200 Multi-Monitor-Serie f?hrt die bew?hrte Matrox Tradition im Multi-Monitor- Bereich fort und bietet flexible und fortschrittliche L?sungen.Matrox stellt als erstes Unternehmen einen vierfachen digitalen PanelLink? DVI Flachbildschirm Ausgang zur Verf?gung. Mit den optional erh?ltlichen TV Tuner und Video-Capture M?glichkeiten stellt die Matrox G200 MMS eine alles umfassende Mehrschirm-L?sung dar.<br><br>\r\n<b>Leistungsmerkmale:</b>\r\n<ul>\r\n<li>Preisgekr?nter Matrox G200 128-Bit Grafikchip</li>\r\n<li>Schneller 8 MB SGRAM-Speicher pro Kanal</li>\r\n<li>Integrierter, leistungsstarker 250 MHz RAMDAC</li>\r\n<li>Unterst?tzung f?r bis zu 16 Bildschirme ?ber 4 Quad-Karten (unter Win NT,ab Treiber 4.40)</li>\r\n<li>Unterst?tzung von 9 Monitoren unter Win 98</li>\r\n<li>2 bzw. 4 analoge oder digitale Ausgabekan?le pro PCI-Karte</li>\r\n<li>Desktop-Darstellung von 1800 x 1440 oder 1920 x 1200 pro Chip</li>\r\n<li>Anschlu?m?glichkeit an einen 15-poligen VGA-Monitor oder an einen 30-poligen digitalen DVI-Flachbildschirm plus integriertem Composite-Video-Eingang (bei der TV-Version)</li>\r\n<li>PCI Grafikkarte, kurze Baul?nge</li>\r\n<li>Treiberunterst?tzung: Windows? 2000, Windows NT? und Windows? 98</li>\r\n<li>Anwendungsbereiche: B?rsenumgebung mit zeitgleich gro?em Visualisierungsbedarf, Video?berwachung, Video-Conferencing</li>\r\n</ul>','www.matrox.com/mga/deutsch/products/g200_mms/home.cfm',0);
+INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (2,2,'Matrox G400 32 MB','<b>Neu! Matrox G400 &quot;all inclusive&quot; und vieles mehr...</b><br><br>\r\nDie neue Millennium G400-Serie - Hochleistungsgrafik mit dem sensationellen Unterschied. Ausgestattet mit dem neu eingef?hrten Matrox G400 Grafikchip, bietet die Millennium G400-Serie eine ?berragende Beschleunigung inklusive bisher nie dagewesener Bildqualitat und enorm flexibler Darstellungsoptionen bei allen Ihren 3D-, 2D- und DVD-Anwendungen.<br><br>\r\n<ul>\r\n<li>DualHead Display und TV-Ausgang</li>\r\n<li>Environment Mapped Bump Mapping</li>\r\n<li>Matrox G400 256-Bit DualBus</li>\r\n<li>3D Rendering Array Prozessor</li>\r\n<li>Vibrant Color Quality? (VCQ?)</li>\r\n<li>UltraSharp DAC</li>\r\n</ul>\r\n<i>&quot;Bleibt abschlie?end festzustellen, da? die Matrox Millennium G400 Max als Allroundkarte f?r den Highend-PC derzeit unerreicht ist. Das ergibt den Testsieg und unsere w?rmste Empfehlung.&quot;</i><br>\r\n<b>GameStar 8/99 (S.184)</b>','www.matrox.com/mga/deutsch/products/mill_g400/home.cfm',0);
+INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (3,2,'Microsoft IntelliMouse Pro','Die IntelliMouse Pro hat mit der IntelliRad-Technologie einen neuen Standard gesetzt. Anwenderfreundliche Handhabung und produktiveres Arbeiten am PC zeichnen die IntelliMouse aus. Die gew?lbte Oberseite pa?t sich nat?rlich in die Handfl?che ein, die geschwungene Form erleichtert das Bedienen der Maus. Sie ist sowohl f?r Rechts- wie auch f?r Linksh?nder geeignet. Mit dem Rad der IntelliMouse kann der Anwender einfach und komfortabel durch Dokumente navigieren.<br><br>\r\n<b>Eigenschaften:</b>\r\n<ul>\r\n<li><b>ANSCHLUSS:</b> PS/2</li>\r\n<li><b>FARBE:</b> wei?</li>\r\n<li><b>TECHNIK:</b> Mauskugel</li>\r\n<li><b>TASTEN:</b> 3 (incl. Scrollrad)</li>\r\n<li><b>SCROLLRAD:</b> Ja</li>\r\n</ul>','',0);
+INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (4,2,'Die Ersatzkiller','Originaltitel: &quot;The Replacement Killers&quot;<br><br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 80 minutes.<br>\r\nAu?erdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\n(USA 1998). Til Schweiger schie?t auf Hongkong-Star Chow Yun-Fat (&quot;Anna und der K?nig&quot;) ? ein Fehler ...','www.replacement-killers.com',0);
+INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (5,2,'Blade Runner - Director''s Cut','Regional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 112 minutes.<br>\r\nAu?erdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\n<b>Sci-Fi-Klassiker, USA 1983, 112 Min.</b><br><br>\r\nLos Angeles ist im Jahr 2019 ein Hexenkessel. Dauerregen und Smog tauchen den ?berbev?lkerten Moloch in ewige D?mmerung. Polizeigleiter schwirren durch die Luft und ?berwachen das grelle Ethnogemisch, das sich am Fu?e 400st?ckiger Stahlbeton-Pyramiden tummelt. Der abgehalfterte Ex-Cop und \"Blade Runner\" Rick Deckard ist Spezialist f?r die Beseitigung von Replikanten, k?nstlichen Menschen, geschaffen f?r harte Arbeit auf fremden Planeten. Nur ihm kann es gelingen, vier fl?chtige, hochintelligente \"Nexus 6\"-Spezialmodelle zu stellen. Die sind mit ihrem starken und brandgef?hrlichen Anf?hrer Batty auf der Suche nach ihrem Sch?pfer. Er soll ihnen eine l?ngere Lebenszeit schenken. Das mu? Rick Deckard verhindern.  Als sich der eiskalte J?ger in Rachel, die Sekret?rin seines Auftraggebers, verliebt, ger?t sein Weltbild jedoch ins Wanken. Er entdeckt, da? sie - vielleicht wie er selbst - ein Replikant ist ...<br><br>\r\nDie Konfrontation des Menschen mit \"Realit?t\" und \"Virtualit?t\" und das verstrickte Spiel mit get?rkten Erinnerungen zieht sich als roter Faden durch das Werk von Autor Philip K. Dick (\"Die totale Erinnerung\"). Sein Roman \"Tr?umen Roboter von elektrischen Schafen?\" liefert die Vorlage f?r diesen doppelb?digen Thriller, der den Zuschauer mit faszinierenden\r\nZukunftsvisionen und der gigantischen Kulisse des Gro?stadtmolochs gefangen nimmt.','www.bladerunner.com',0);
+INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (6,2,'Matrix','Originaltitel: &quot;The Matrix&quot;<br><br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 136 minuten.<br>\r\nAu?erdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\n(USA 1999) Der Geniestreich der Wachowski-Br?der. In dieser technisch perfekten Utopie k?mpft Hacker Keanu Reeves gegen die Diktatur der Maschinen...','www.whatisthematrix.com',0);
+INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (7,2,'e-m@il f?r Dich','Original: &quot;You''ve got mail&quot;<br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 112 minutes.<br>\r\nAu?erdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\n(USA 1998) von Nora Ephron (&qout;Schlaflos in Seattle&quot;). Meg Ryan und Tom Hanks kn?pfen per E-Mail zarte Bande. Dass sie sich schon kennen, ahnen sie nicht ...','www.youvegotmail.com',0);
+INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (8,2,'Das Gro?e Krabbeln','Originaltitel: &quot;A Bug''s Life&quot;<br><br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 96 minuten.<br>\r\nAu?erdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\n(USA 1998). Ameise Flik zettelt einen Aufstand gegen gefr??ige Grash?pfer an ... Eine fantastische Computeranimation des \"Toy Story\"-Teams. ','www.abugslife.com',0);
+INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (9,2,'Alarmstufe: Rot','Originaltitel: &quot;Under Siege&quot;<br><br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 96 minuten.<br>\r\nAu?erdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\n<b>Actionthriller. Smutje Steven Seagal versalzt Schurke Tommy Lee Jones die Suppe</b><br><br>\r\nKatastrophe ahoi: Kurz vor Ausmusterung der \"U.S.S. Missouri\" kapert die High-tech-Bande von Ex-CIA-Agent Strannix (Tommy Lee Jones) das Schlachtschiff. Strannix will die Nuklearraketen des Kreuzers klauen und verscherbeln. Mit Hilfe des irren Ersten Offiziers Krill (lustig: Gary Busey) killen die Gangster den K?pt?n und sperren seine Crew unter Deck. Bl?d, dass sie dabei Schiffskoch Rybak (Steven Seagal) vergessen. Der Ex-Elitek?mpfer knipst einen Schurken nach dem anderen aus. Eine Verb?ndete findet er in Stripperin Jordan (Ex-\"Baywatch\"-Biene Erika Eleniak). Die sollte eigentlich aus K?pt?ns Geburtstagstorte h?pfen ... Klar: Seagal ist kein Edelmime. Daf?r ist Regisseur Andrew Davis (\"Auf der Flucht\") ein K?nner: Er w?rzt die Action-Orgie mit Ironie und nutzt die imposante Schiffskulisse voll aus. F?r Effekte und Ton gab es 1993 Oscar-Nominierungen. ','',0);
+INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (10,2,'Alarmstufe: Rot 2','Originaltitel: &quot;Under Siege 2: Dark Territory&quot;<br><br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 96 minuten.<br>\r\nAu?erdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\n(USA ?95). Von einem gekaperten Zug aus ?bernimmt Computerspezi Dane die Kontrolle ?ber einen Kampfsatelliten und erpresst das Pentagon. Aber auch Ex-Offizier Ryback (Steven Seagal) ist im Zug ...\r\n','',0);
+INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (11,2,'Fire Down Below','Regional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 96 minuten.<br>\r\nAu?erdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\nEin mysteri?ser Mordfall f?hrt den Bundesmarschall Jack Taggert in eine Kleinstadt im US-Staat Kentucky. Doch bei seinen Ermittlungen st??t er auf eine Mauer des Schweigens. Angst beherrscht die Stadt, und alle Spuren f?hren zu dem undurchsichtigen Minen-Tycoon Orin Hanner. Offenbar werden in der friedlichen Berglandschaft gigantische Mengen Giftm?lls verschoben, mit unkalkulierbaren Risiken. Um eine Katastrophe zu verhindern, r?umt Taggert gnadenlos auf ...','',0);
+INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (12,2,'Stirb Langsam - Jetzt Erst Recht','Originaltitel: &quot;Die Hard With A Vengeance&quot;<br><br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 96 minuten.<br>\r\nAu?erdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\nSo explosiv, so spannend, so rasant wie nie zuvor: Bruce Willis als Detectiv John McClane in einem Action-Thriller der Superlative! Das ist heute nicht McClanes Tag. Seine Frau hat ihn verlassen, sein Bo? hat ihn vom Dienst suspendiert und irgendein Verr?ckter hat ihn gerade zum Gegenspieler in einem teuflischen Spiel erkoren - und der Einsatz ist New York selbst. Ein Kaufhaus ist explodiert, doch das ist nur der Auftakt. Der geniale Superverbrecher Simon droht, die ganze Stadt St?ck f?r St?ck in die Luft zu sprengen, wenn McClane und sein Partner wider Willen seine explosiven\" R?tsel nicht l?sen. Eine m?rderische Hetzjagd quer durch New York beginnt - bis McClane merkt, da? der Bombenterror eigentlich nur ein brillantes Ablenkungsman?ver ist...!<br><i>\"Perfekt gemacht und stark besetzt. Das Action-Highlight des Jahres!\"</i> <b>(Bild)</b>','',0);
+INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (13,2,'Zwei stahlharte Profis','Originaltitel: &quot;Lethal Weapon&quot;<br><br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 96 minuten.<br>\r\nAu?erdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\nSie sind beide Cops in L.A.. Sie haben beide in Vietnam f?r eine Spezialeinheit gek?mpft. Und sie hassen es beide, mit einem Partner arbeiten zu m?ssen. Aber sie sind Partner: Martin Riggs, der Mann mit dem Todeswunsch, f?r wen auch immer. Und Roger Murtaugh, der besonnene Polizist. Gemeinsam enttarnen sie einen gigantischen Heroinschmuggel, hinter dem sich eine Gruppe ehemaliger CIA-S?ldner verbirgt. Eine Killerbande gegen zwei Profis ...','',0);
+INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (14,2,'Labyrinth ohne Ausweg','Originaltitel: &quot;Red Corner&quot;<br><br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 96 minuten.<br>\r\nAu?erdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\nDem Amerikaner Jack Moore wird in China der bestialische Mord an einem Fotomodel angeh?ngt. Brutale Gef?ngnisschergen versuchen, ihn durch Folter zu einem Gest?ndnis zu zwingen. Vor Gericht fordert die Anklage die Todesstrafe - Moore''s Schicksal scheint besiegelt. Durch einen Zufall gelingt es ihm, aus der Haft zu fliehen, doch aus der feindseligen chinesischen Hauptstadt gibt es praktisch kein Entkommen ...','',0);
+INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (15,2,'Frantic','Originaltitel: &quot;Frantic&quot;<br><br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 96 minuten.<br>\r\nAu?erdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\nEin romantischer Urlaub in Paris, der sich in einen Alptraum verwandelt. Ein Mann auf der verzweifelten Suche nach seiner entf?hrten Frau. Ein d?ster-bedrohliches Paris, in dem nur ein Mensch Licht in die t?dliche Aff?re bringen kann.','',0);
+INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (16,2,'Mut Zur Wahrheit','Originaltitel: &quot;Courage Under Fire&quot;<br><br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 96 minuten.<br>\r\nAu?erdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\nLieutenant Colonel Nathaniel Serling (Denzel Washington) l?sst w?hrend einer Schlacht im Golfkrieg versehentlich auf einen US-Panzer schie?en, dessen Mannschaft dabei ums Leben kommt. Ein Jahr nach diesem Vorfall wird Serling, der mittlerweile nach Washington D.C. versetzt wurde, die Aufgabe ?bertragen, sich um einen Kandidaten zu k?mmern, der w?hrend des Krieges starb und dem der h?chste milit?rische Orden zuteil werden soll. Allerdings sind sowohl der Fall und als auch der betreffende Soldat ein politisch hei?es Eisen -- Captain Karen Walden (Meg Ryan) ist Amerikas erster weiblicher Soldat, der im Kampf get?tet wurde.<br><br>\r\nSerling findet schnell heraus, dass es im Fall des im felsigen Gebiet von Kuwait abgest?rzten Rettungshubschraubers Diskrepanzen gibt. In Flashbacks werden von unterschiedlichen Personen verschiedene Versionen von Waldens Taktik, die Soldaten zu retten und den Absturz zu ?berleben, dargestellt (? la Kurosawas Rashomon). Genau wie in Glory erweist sich Regisseur Edward Zwicks Zusammenstellung von bekannten und unbekannten Schauspielern als die richtige Mischung. Waldens Crew ist besonders ?berzeugend. Matt Damon als der Sanit?ter kommt gut als der leichtfertige Typ r?ber, als er Washington seine Geschichte erz?hlt. Im Kampf ist er ein mit Fehlern behafteter, humorvoller Soldat.<br><br>\r\nDie erstaunlichste Arbeit in Mut zur Wahrheit leistet Lou Diamond Phillips (als der Sch?tze der Gruppe), dessen Karriere sich auf dem Weg in die direkt f?r den Videomarkt produzierten Filme befand. Und dann ist da noch Ryan. Sie hat sich in dramatischen Filmen in der Vergangenheit gut behauptet (Eine fast perfekte Liebe, Ein blutiges Erbe), es aber nie geschafft, ihrem Image zu entfliehen, das sie in die Ecke der romantischen Kom?die steckte. Mit gef?rbtem Haar, einem leichten Akzent und der von ihr geforderten Darstellungskunst hat sie endlich einen langlebigen dramatischen Film. Obwohl sie nur halb so oft wie Washington im Film zu sehen ist, macht ihre mutige und beeindruckend nachhaltige Darstellung Mut zur Wahrheit zu einem speziellen Film bis hin zu dessen seltsamer, aber lohnender letzter Szene.','',0);
+INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (17,2,'Speed','Originaltitel: &quot;Speed&quot;<br><br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 96 minuten.<br>\r\nAu?erdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\nEr ist ein Cop aus der Anti-Terror-Einheit von Los Angeles. Und so ist der Alarm f?r Jack Traven nichts Ungew?hnliches: Ein Terrorist will drei Millionen Dollar erpressen, oder die zuf?lligen Geiseln in einem Aufzug fallen 35 Stockwerke in die Tiefe. Doch Jack schafft das Unm?gliche - die Geiseln werden gerettet und der Terrorist stirbt an seiner eigenen Bombe. Scheinbar. Denn schon wenig sp?ter steht Jack (Keanu Reeves) dem Bombenexperten Payne erneut gegen?ber. Diesmal hat sich der Erpresser eine ganz perfide Mordwaffe ausgedacht: Er plaziert eine Bombe in einem ?ffentlichen Bus. Der Mechanismus der Sprengladung schaltet sich automatisch ein, sobald der Bus schneller als 50 Meilen in der Stunde f?hrt und detoniert sofort, sobald die Geschwindigkeit sinkt. Pl?tzlich wird f?r eine Handvoll ahnungsloser Durchschnittsb?rger der Weg zur Arbeit zum H?llentrip - und nur Jack hat ihr Leben in der Hand. Als der Busfahrer verletzt wird, ?bernimmt Fahrgast Annie (Sandra Bullock) das Steuer. Doch wohin mit einem Bus, der nicht bremsen kann in der Stadt der Staus? Doch es kommt noch schlimmer: Payne (Dennis Hopper) will jetzt nicht nur seine drei Millionen Dollar. Er will Jack. Um jeden Preis.','',0);
+INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (18,2,'Speed 2: Cruise Control','Originaltitel: &quot;Speed 2 - Cruise Control&quot;<br><br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 96 minuten.<br>\r\nAu?erdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\nHalten Sie ihre Schwimmwesten bereit, denn die actiongeladene Fortsetzung von Speed begibt sich auf Hochseekurs. Erleben Sie Sandra Bullock erneut in ihrer Star-Rolle als Annie Porter. Die Karibik-Kreuzfahrt mit ihrem Freund Alex entwickelt sich unaufhaltsam zur rasenden Todesfahrt, als ein wahnsinniger Computer-Spezialist den Luxusliner in seine Gewalt bringt und auf einen m?rderischen Zerst?rungskurs programmiert. Eine hochexplosive Reise, bei der kein geringerer als Action-Spezialist Jan De Bont das Ruder in die Hand nimmt. Speed 2: Cruise Controll l??t ihre Adrenalin-Wellen in rasender Geschwindigkeit ganz nach oben schnellen.','',0);
+INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (19,2,'Verr?ckt nach Mary','Originaltitel: &quot;There''s Something About Mary&quot;<br><br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 96 minuten.<br>\r\nAu?erdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\n13 Jahre nachdem Teds Rendezvous mit seiner angebeteten Mary in einem peinlichen Fiasko endete, tr?umt er immer noch von ihr und engagiert den windigen Privatdetektiv Healy um sie aufzusp?ren. Der findet Mary in Florida und verliebt sich auf den ersten Blick in die atemberaubende Traumfrau. Um Ted als Nebenbuhler auszuschalten, tischt er ihm dicke L?gen ?ber Mary auf. Ted l??t sich jedoch nicht abschrecken, eilt nach Miami und versucht nun alles, um Healy die Balztour zu vermasseln. Doch nicht nur Healy ist verr?ckt nach Mary und Ted bekommt es mit einer ganzen Legion liebeskranker Konkurrenten zu tun ...','',0);
+INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (20,2,'Menschenkind','Originaltitel: &quot;Beloved&quot;<br><br>\r\nRegional Code: 2 (Japan, Europe, Middle East, South Africa).<br>\r\nSprachen: English, Deutsch.<br>\r\nUntertitel: English, Deutsch, Spanish.<br>\r\nAudio: Dolby Surround 5.1.<br>\r\nBildformat: 16:9 Wide-Screen.<br>\r\nDauer: (approx) 96 minuten.<br>\r\nAu?erdem: Interaktive Menus, Kapitelauswahl, Untertitel.<br><br>\r\nDieser vielschichtige Film ist eine Arbeit, die Regisseur Jonathan Demme und dem amerikanischen Talkshow-Star Oprah Winfrey sehr am Herzen lag. Der Film deckt im Verlauf seiner dreist?ndigen Spielzeit viele Bereiche ab. Menschenkind ist teils Sklavenepos, teils Mutter-Tochter-Drama und teils Geistergeschichte.<br><br>\r\nDer Film fordert vom Publikum h?chste Aufmerksamkeit, angefangen bei seiner dramatischen und etwas verwirrenden Eingangssequenz, in der die Bewohner eines Hauses von einem niedertr?chtigen ?bersinnlichen Angriff heimgesucht werden. Aber Demme und seine talentierte Besetzung bereiten denen, die dabei bleiben ein unvergessliches Erlebnis. Der Film folgt den Spuren von Sethe (in ihren mittleren Jahren von Oprah Winfrey dargestellt), einer ehemaligen Sklavin, die sich scheinbar ein friedliches und produktives Leben in Ohio aufgebaut hat. Aber durch den erschreckenden und sparsamen Einsatz von R?ckblenden deckt Demme, genau wie das literarische Meisterwerk von Toni Morrison, auf dem der Film basiert, langsam die Schrecken von Sethes fr?herem Leben auf und das schreckliche Ereignis, dass dazu f?hrte, dass Sethes Haus von Geistern heimgesucht wird.<br><br>\r\nW?hrend die Gr?uel der Sklaverei und das blutige Ereignis in Sethes Familie unleugbar tief beeindrucken, ist die Qualit?t des Film auch in kleineren, genauso befriedigenden Details sichtbar. Die geistlich beeinflusste Musik von Rachel Portman ist gleichzeitig befreiend und bedr?ckend, und der Einblick in die afro-amerikanische Gemeinschaft nach der Sklaverei -- am Beispiel eines Familienausflugs zu einem Jahrmarkt, oder dem gospelsingenden N?hkr?nzchen -- machen diesen Film zu einem speziellen Vergn?gen sowohl f?r den Geist als auch f?r das Herz. Die Schauspieler, besonders Kimberley Elise als Sethes k?mpfende Tochter und Thandie Newton als der mysteri?se Titelcharakter, sind sehr r?hrend. Achten Sie auch auf Danny Glover (Lethal Weapon) als Paul D.','',0);
+INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (21,2,'SWAT 3: Elite Edition','<b>KEINE KOMPROMISSE!</b><br><i>K?mpfen Sie Seite an Seite mit Ihren LAPD SWAT-Kameraden gegen das organisierte Verbrechen!</i><br><br>\r\nEine der realistischsten 3D-Taktiksimulationen der letzten Zeit jetzt mit Multiplayer-Modus, 5 neuen Missionen und jede Menge n?tzliche Tools!<br><br>\r\nLos Angeles, 2005. In wenigen Tagen steht die Unterzeichnung des Abkommens der Vereinten Nationen zur Atom-?chtung durch Vertreter aller Nationen der Welt an. Radikale terroristische Vereinigungen machen sich in der ganzen Stadt breit. Verantwortlich f?r die Sicherheit der Delegierten zeichnet sich eine Eliteeinheit der LAPD: das SWAT-Team. Das Schicksal der Stadt liegt in Ihren H?nden.<br><br>\r\n<b>Neue Features:</b>\r\n<ul>\r\n<li>Multiplayer-Modus (Co op-Modus, Deathmatch in den bekannten Variationen)</li>\r\n<li>5 neue Missionen an original ?rtlichkeiten Las (U-Bahn, Whitman Airport, etc.)</li>\r\n<li>neue Charakter</li>\r\n<li>neue Skins</li>\r\n<li>neue Waffen</li>\r\n<li>neue Sounds</li>\r\n<li>verbesserte KI</li>\r\n<li>Tools-Package</li>\r\n<li>Scenario-Editor</li>\r\n<li>Level-Editor</li>\r\n</ul>\r\nDie dritte Folge der Bestseller-Reihe im Bereich der 3D-Echtzeit-Simulationen pr?sentiert sich mit einer neuen Spielengine mit extrem ausgepr?gtem Realismusgrad. Der Spieler ?bernimmt das Kommando ?ber eine der besten Polizei-Spezialeinheiten oder einer der ?belsten Terroristen-Gangs der Welt. Er durchl?uft - als \"Guter\" oder \"B?ser\" - eine der h?rtesten und elit?rsten Kampfausbildungen, in der er lernt, mit jeder Art von Krisensituationen umzugehen. Bei diesem Action-Abenteuer geht es um das Leben prominenter Vertreter der Vereinten Nationen und bei 16 Missionen an Originalschaupl?tzen in LA gibt die \"lebensechte\" KI den Protagonisten jeder Seite so einige harte N?sse zu knacken.','www.swat3.com',0);
+INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (22,2,'Unreal Tournament','2341: Die Gewalt ist eine Lebensweise, die sich ihren Weg durch die dunklen Risse der Gesellschaft bahnt. Sie bedroht die Macht und den Einfluss der regierenden Firmen, die schnellstens ein Mittel finden m?ssen, die tobenden Massen zu bes?nftigen - ein profitables Mittel ... Gladiatorenk?mpfe sind die L?sung. Sie sollen den Durst der Menschen nach Blut stillen und sind die perfekte Gelegenheit, die Aufst?ndischen, Kriminellen und Aliens zu beseitigen, die die Firmenelite bedrohen.<br><br>\r\nDas Turnier war geboren - ein Kampf auf Leben und Tod. Galaxisweit live und in Farbe! K?mpfen Sie f?r Freiheit, Ruhm und Ehre. Sie m?ssen stark, schnell und geschickt sein ... oder Sie bleiben auf der Strecke.<br><br>\r\nK?mpfen Sie allein oder kommandieren Sie ein Team gegen Armeen unbarmherziger Krieger, die alle nur ein Ziel vor Augen haben: Die Arenen lebend zu verlassen und sich dem Grand Champion zu stellen ... um ihn dann zu bezwingen!<br><br>\r\n<b>Features:</b>\r\n<ul>\r\n<li>Auf dem PC mehrfach als Spiel des Jahres ausgezeichnet!</li>\r\n<li>Mehr als 50 faszinierende Level - verlassene Raumstationen, gotische Kathedralen und graffitibedeckte Gro?st?dte.</li>\r\n<li>Vier actionreiche Spielmodi - Deathmatch, Capture the Flag, Assault und Domination werden Ihren Adrenalinpegel in die H?he schnellen lassen.</li>\r\n<li>Dramatische Mehrspieler-K?mpfe mit 2, 3 und 4 Spielern, auch ?ber das Netzwerk</li>\r\n<li>Gnadenlos aggressive Computergegner verlangen Ihnen das ?u?erste ab.</li>\r\n<li>Neuartiges Benutzerinterface und verbesserte Steuerung - auch mit USB-Maus und -Tastatur spielbar.</li>\r\n</ul>\r\nDer Nachfolger des Actionhits \"Unreal\" verspricht ein leichtes, intuitives Interface, um auch Einsteigern schnellen Zugang zu den Duellen gegen die Bots zu erm?glichen. Mit diesen KI-Kriegern kann man auch Teams bilden und im umfangreichen Multiplayermodus ohne Onlinekosten in den Kampf ziehen. 35 komplett neue Arenen und das erweiterte Waffenangebot bilden dazu den w?rdigen Rahmen.','www.unrealtournament.net',0);
+INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (23,2,'The Wheel Of Time','<b><i>\"Wheel Of Time\"(Das Rad der Zeit)</i></b> basiert auf den Fantasy-Romanen von Kultautor Robert Jordan und stellt einen einzigartigen Mix aus Strategie-, Action- und Rollenspielelementen dar. Obwohl die Welt von \"Wheel of Time\" eng an die literarische Vorlage der Romane angelehnt ist, erz?hlt das Spiel keine lineare Geschichte. Die Story entwickelt sich abh?ngig von den Aktionen der Spieler, die jeweils die Rollen der Hauptcharaktere aus dem Roman ?bernehmen. Jede Figur hat den Oberbefehl ?ber eine gro?e Gefolgschaft, milit?rische Einheiten und L?ndereien. Die Spieler k?nnen ihre eigenen Festungen konstruieren, individuell ausbauen, von dort aus das umliegende Land erforschen, magische Gegenst?nde sammeln oder die gegnerischen Zitadellen erst?rmen. Selbstverst?ndlich kann man sich auch ?ber LAN oder Internet gegenseitig Truppen auf den Hals hetzen und die Festungen seiner Mitspieler in Schutt und Asche legen. Dreh- und Anlegepunkt von \"Wheel of Time\" ist der Kampf um die finstere Macht \"The Dark One\", die vor langer Zeit die Menschheit beinahe ins Verderben st?rzte und nur mit Hilfe gewaltiger magischer Energie verbannt werden konnte. \"The Amyrlin Seat\" und \"The Children of the Night\" k?mpfen nur gegen \"The Forsaken\" und \"The Hound\" um den Besitz des Schl?ssels zu \"Shayol Ghul\" - dem magischen Siegel, mit dessen Hilfe \"The Dark One\" seinerzeit gebannt werden konnte.<br><br>\r\n<b>Features:</b> \r\n<ul>\r\n<li>Ego-Shooter mit Strategie-Elementen</li>\r\n<li>Spielumgebung in Echtzeit-3D</li>\r\n<li>Konstruktion aud Ausbau der eigenen Festung</li>\r\n<li>Einsatz von ?ber 100 Artefakten und Zauberspr?chen</li>\r\n<li>Single- und Multiplayermodus</li>\r\n</ul>\r\nIm Mittelpunkt steht der Kampf gegen eine finstere Macht namens The Dark One. Deren Schergen m?ssen mit dem Einsatz von ?ber 100 Artefakten und Zaubereien wie Blitzschlag oder Teleportation aus dem Weg ger?umt werden. Die opulente 3D-Grafik verbindet Strategie- und Rollenspielelemente. \r\n\r\n<b>Voraussetzungen</b>\r\nmind. P200, 32MB RAM, 4x CD-Rom, Win95/98, DirectX 5.0 komp.Grafikkarte und Soundkarte. ','www.wheeloftime.com',0);
+INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (24,2,'Disciples: Sacred Land','Rundenbasierende Fantasy/RTS-Strategie mit gutem Design (vor allem die Levels, 4 versch. Rassen, tolle Einheiten), fantastischer Atmosph?re und exzellentem Soundtrack. Grafisch leider auf das Niveau von 1990.','www.strategyfirst.com/disciples/welcome.html',0);
+INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (25,2,'Microsoft Internet Tastatur PS/2','<i>Microsoft Internet Keyboard,Windows-Tastatur mit 10 zus?tzl. Tasten,2 selbst programmierbar, abnehmbareHandgelenkauflage. Treiber im Lieferumfang.</i><br><br>\r\nEin-Klick-Zugriff auf das Internet und vieles mehr! Das Internet Keyboard verf?gt ?ber 10 zus?tzliche Abk?rzungstasten auf einer benutzerfreundlichen Standardtastatur, die dar?ber hinaus eine abnehmbare Handballenauflage aufweist. ?ber die Abk?rzungstasten k?nnen Sie durch das Internet surfen oder direkt von der Tastatur aus auf E-Mails zugreifen. Die IntelliType Pro-Software erm?glicht au?erdem das individuelle Belegen der Tasten.','',0);
+INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (26,2,'Microsof IntelliMouse Explorer','Die IntelliMouse Explorer ?berzeugt durch ihr modernes Design mit silberfarbenem Geh?use, sowie rot schimmernder Unter- und R?ckseite. Die neuartige IntelliEye-Technologie sorgt f?r eine noch nie dagewesene Pr?zision, da statt der beweglichen Teile (zum Abtasten der Bewegungs?nderungen an der Unterseite der Maus) ein optischer Sensor die Bewegungen der Maus erfa?t. Das Herzst?ck der Microsoft IntelliEye-Technologie ist ein kleiner Chip, der einen optischen Sensor und einen digitalen Signalprozessor (DSP) enth?lt.<br><br>\r\nDa auf bewegliche Teile, die Staub, Schmutz und Fett aufnehmen k?nnen, verzichtet wurde, mu? die IntelliMouse Explorer nicht mehr gereinigt werden. Dar?ber hinaus arbeitet die IntelliMouse Explorer auf nahezu jeder Arbeitsoberfl?che, so da? kein Mauspad mehr erforderlich ist. Mit dem Rad und zwei neuen zus?tzlichen Maustasten erm?glicht sie effizientes und komfortables Arbeiten am PC.<br><br>\r\n<b>Eigenschaften:</b>\r\n<ul>\r\n<li><b>ANSCHLUSS:</b> USB (PS/2-Adapter enthalten)</li>\r\n<li><b>FARBE:</b> metallic-grau</li>\r\n<li><b>TECHNIK:</b> Optisch (Akt.: ca. 1500 Bilder/s)</li>\r\n<li><b>TASTEN:</b> 5 (incl. Scrollrad)</li>\r\n<li><b>SCROLLRAD:</b> Ja</li>\r\n</ul>\r\n<i><b>BEMERKUNG:</b><br>Keine Reinigung bewegter Teile mehr notwendig, da statt der Mauskugel ein Fotoempf?nger benutzt wird.</i>','',0);
+INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (27,2,'Hewlett-Packard LaserJet 1100Xi','<b>HP LaserJet f?r mehr Produktivit?t und Flexibilit?t am Arbeitsplatz</b><br><br>\r\nDer HP LaserJet 1100Xi Drucker verbindet exzellente Laserdruckqualit?t mit hoher Geschwindigkeit f?r mehr Effizienz.<br><br>\r\n<b>Zielkunden</b>\r\n<ul><li>Einzelanwender, die Wert auf professionelle Ausdrucke in Laserqualit?t legen und schnelle Ergebnisse auch bei komplexen Dokumenten erwarten.</li>\r\n<li>Der HP LaserJet 1100 sorgt mit gestochen scharfen Texten und Grafiken f?r ein professionelles Erscheinungsbild Ihrer Arbeit und Ihres Unternehmens. Selbst bei komplexen Dokumenten liefert er schnelle Ergebnisse. Andere Medien - wie z.B. Transparentfolien und Briefumschl?ge, etc. - lassen sich problemlos bedrucken. Somit ist der HP LaserJet 1100 ein Multifunktionstalent im B?roalltag.</li>\r\n</ul>\r\n<b>Eigenschaften</b>\r\n<ul>\r\n<li><b>Druckqualit?t</b> Schwarzwei?: 600 x 600 dpi</li>\r\n<li><b>Monatliche Druckleistung</b> Bis zu 7000 Seiten</li>\r\n<li><b>Speicher</b> 2 MB Standardspeicher, erweiterbar auf 18 MB</li>\r\n<li><b>Schnittstelle/gemeinsame Nutzung</b> Parallel, IEEE 1284-kompatibel</li>\r\n<li><b>Softwarekompatibilit?t</b> DOS/Win 3.1x/9x/NT 4.0</li>\r\n<li><b>Papierzuf?hrung</b> 125-Blatt-Papierzuf?hrung</li>\r\n<li><b>Druckmedien</b> Normalpapier, Briefumschl?ge, Transparentfolien, kartoniertes Papier, Postkarten und Etiketten</li>\r\n<li><b>Netzwerkf?hig</b> ?ber HP JetDirect PrintServer</li>\r\n<li><b>Lieferumfang</b> HP LaserJet 1100Xi Drucker (Lieferumfang: Drucker, Tonerkassette, 2 m Parallelkabel, Netzkabel, Kurzbedienungsanleitung, Benutzerhandbuch, CD-ROM, 3,5\"-Disketten mit Windows? 3.1x, 9x, NT 4.0 Treibern und DOS-Dienstprogrammen)</li>\r\n<li><b>Gew?hrleistung</b> Ein Jahr</li>\r\n</ul>\r\n','www.hp.com',0);
 INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (1,3,'Matrox G200 MMS','Reinforcing its position as a multi-monitor trailblazer, Matrox Graphics Inc. has once again developed the most flexible and highly advanced solution in the industry. Introducing the new Matrox G200 Multi-Monitor Series; the first graphics card ever to support up to four DVI digital flat panel displays on a single 8&quot; PCI board.<br><br>With continuing demand for digital flat panels in the financial workplace, the Matrox G200 MMS is the ultimate in flexible solutions. The Matrox G200 MMS also supports the new digital video interface (DVI) created by the Digital Display Working Group (DDWG) designed to ease the adoption of digital flat panels. Other configurations include composite video capture ability and onboard TV tuner, making the Matrox G200 MMS the complete solution for business needs.<br><br>Based on the award-winning MGA-G200 graphics chip, the Matrox G200 Multi-Monitor Series provides superior 2D/3D graphics acceleration to meet the demanding needs of business applications such as real-time stock quotes (Versus), live video feeds (Reuters & Bloombergs), multiple windows applications, word processing, spreadsheets and CAD.','www.matrox.com/mga/products/g200_mms/home.cfm',0);
 INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (2,3,'Matrox G400 32MB','<b>Dramatically Different High Performance Graphics</b><br><br>Introducing the Millennium G400 Series - a dramatically different, high performance graphics experience. Armed with the industry''s fastest graphics chip, the Millennium G400 Series takes explosive acceleration two steps further by adding unprecedented image quality, along with the most versatile display options for all your 3D, 2D and DVD applications. As the most powerful and innovative tools in your PC''s arsenal, the Millennium G400 Series will not only change the way you see graphics, but will revolutionize the way you use your computer.<br><br><b>Key features:</b><ul><li>New Matrox G400 256-bit DualBus graphics chip</li><li>Explosive 3D, 2D and DVD performance</li><li>DualHead Display</li><li>Superior DVD and TV output</li><li>3D Environment-Mapped Bump Mapping</li><li>Vibrant Color Quality rendering </li><li>UltraSharp DAC of up to 360 MHz</li><li>3D Rendering Array Processor</li><li>Support for 16 or 32 MB of memory</li></ul>','www.matrox.com/mga/products/mill_g400/home.htm',0);
 INSERT INTO products_description ([products_id], [language_id], [products_name], [products_description], [products_url], [products_viewed]) VALUES (3,3,'Microsoft IntelliMouse Pro','Every element of IntelliMouse Pro - from its unique arched shape to the texture of the rubber grip around its base - is the product of extensive customer and ergonomic research. Microsoft''s popular wheel control, which now allows zooming and universal scrolling functions, gives IntelliMouse Pro outstanding comfort and efficiency.','www.microsoft.com/hardware/mouse/intellimouse.asp',0);
@@ -4502,7 +5360,7 @@ INSERT INTO products_options VALUES (2,1,'Size');
 INSERT INTO products_options VALUES (3,1,'Model');
 INSERT INTO products_options VALUES (4,1,'Memory');
 INSERT INTO products_options VALUES (1,2,'Farbe');
-INSERT INTO products_options VALUES (2,2,'Größe');
+INSERT INTO products_options VALUES (2,2,'Gr??e');
 INSERT INTO products_options VALUES (3,2,'Modell');
 INSERT INTO products_options VALUES (4,2,'Speicher');
 INSERT INTO products_options VALUES (1,3,'Color');
@@ -4715,7 +5573,7 @@ INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUE
 
 --# Germany
 INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (79,81,'NDS','Niedersachsen');
-INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (80,81,'BAW','Baden-Württemberg');
+INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (80,81,'BAW','Baden-W?rttemberg');
 INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (81,81,'BAY','Bayern');
 INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (82,81,'BER','Berlin');
 INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (83,81,'BRG','Brandenburg');
@@ -4729,14 +5587,14 @@ INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUE
 INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (91,81,'SAS','Sachsen');
 INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (92,81,'SAC','Sachsen-Anhalt');
 INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (93,81,'SCN','Schleswig-Holstein');
-INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (94,81,'THE','Thüringen');
+INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (94,81,'THE','Th?ringen');
 
 --# Austria
 INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (95,14,'WI','Wien');
-INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (96,14,'NO','Niederösterreich');
-INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (97,14,'OO','Oberösterreich');
+INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (96,14,'NO','Nieder?sterreich');
+INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (97,14,'OO','Ober?sterreich');
 INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (98,14,'SB','Salzburg');
-INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (99,14,'KN','Kärnten');
+INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (99,14,'KN','K?rnten');
 INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (100,14,'ST','Steiermark');
 INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (101,14,'TI','Tirol');
 INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (102,14,'BL','Burgenland');
@@ -4752,7 +5610,7 @@ INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUE
 INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (110,204,'FR','Freiburg');
 INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (111,204,'GE','Genf');
 INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (112,204,'GL','Glarus');
-INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (113,204,'JU','Graubünden');
+INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (113,204,'JU','Graub?nden');
 INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (114,204,'JU','Jura');
 INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (115,204,'LU','Luzern');
 INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (116,204,'NE','Neuenburg');
@@ -4768,12 +5626,12 @@ INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUE
 INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (126,204,'VD','Waadt');
 INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (127,204,'VS','Wallis');
 INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (128,204,'ZG','Zug');
-INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (129,204,'ZH','Zürich');
+INSERT INTO zones ([zone_id], [zone_country_id], [zone_code], [zone_name]) VALUES (129,204,'ZH','Z?rich');
 SET IDENTITY_INSERT zones OFF;
 GO
 
 --# Spain
-INSERT INTO zones (zone_country_id, zone_code, zone_name) VALUES (195,'A Coruña','A Coruña');
+INSERT INTO zones (zone_country_id, zone_code, zone_name) VALUES (195,'A Coru?a','A Coru?a');
 INSERT INTO zones (zone_country_id, zone_code, zone_name) VALUES (195,'Alava','Alava');
 INSERT INTO zones (zone_country_id, zone_code, zone_name) VALUES (195,'Albacete','Albacete');
 INSERT INTO zones (zone_country_id, zone_code, zone_name) VALUES (195,'Alicante','Alicante');
@@ -4826,7 +5684,6 @@ INSERT INTO zones (zone_country_id, zone_code, zone_name) VALUES (195,'Vizcaya',
 INSERT INTO zones (zone_country_id, zone_code, zone_name) VALUES (195,'Zamora','Zamora');
 INSERT INTO zones (zone_country_id, zone_code, zone_name) VALUES (195,'Zaragoza','Zaragoza');
 GO
-
 --# PayPal Express
 INSERT INTO orders_status (orders_status_id, language_id, orders_status_name, public_flag, downloads_flag) values ('4', '1', 'PayPal [Transactions]', 0, 0);
 GO
@@ -4847,7 +5704,7 @@ INSERT INTO configuration (configuration_title, configuration_key, configuration
 INSERT INTO configuration (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, set_function, use_function, date_added) values ('PayPal Transactions Order Status Level', 'MODULE_PAYMENT_PAYPAL_EXPRESS_TRANSACTIONS_ORDER_STATUS_ID', '4', 'Include PayPal transaction information in this order status level', '6', '0', 'tep_cfg_pull_down_order_statuses(', 'tep_get_order_status_name', getdate());
 INSERT INTO configuration (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, date_added) values ('cURL Program Location', 'MODULE_PAYMENT_PAYPAL_EXPRESS_CURL', '/usr/bin/curl', 'The location to the cURL program application.', '6', '0' , getdate());
 GO
-
 --# end data
---# END 
+
+--# END
 GO

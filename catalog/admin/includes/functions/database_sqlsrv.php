@@ -16,6 +16,7 @@
         global $$link;
 
         sqlsrv_configure(SQLSRV_LOG_SYSTEM_ALL, 1);
+        sqlsrv_configure( 'WarningsReturnAsErrors', false );
 
         $conn_array = array
         (
@@ -61,12 +62,9 @@
             $logger->write($query, 'QUERY');
         }
 
-        /* not used
-        $time_start = explode(' ', microtime());
-        */
-
         // Dynamic SQL Translations
 
+        $q = $query;
         $qry = $query;
         $qry = str_ireplace('"', "'", $qry);
         $qry = str_ireplace("\\'", "''", $qry);
@@ -75,19 +73,20 @@
         $qry = str_ireplace('SQL_CALC_FOUND_ROWS', '', $qry);
         $qry = str_ireplace('ifnull(', 'isnull(', $qry);
 
-        $qry = preg_replace('/\w*rlike\s*([\w|.]*)/i', "LIKE $1", $qry); // punt
+        $qry = preg_replace('/rlike\s*([\w|.]*)/i', "LIKE $1", $qry);
+        $qry = preg_replace('/if\s*\(([\w|=|\d|.]*),\s*([\w|.]*)\s*,\s*([\w|.]*)\s*\)/i', "(CASE WHEN ($1) THEN $2 ELSE $3 END)", $qry);
         $qry = preg_replace('/show\s*tables/i', "SELECT TABLE_NAME AS Name FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'", $qry);
         $qry = preg_replace('/show\s*tables\s*status\s*from\s*([\w|.]*)/i', "USE $1; SELECT TABLE_NAME AS Name FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'", $qry);
         $qry = preg_replace('/show\s*table\s*like\s([\w|.]*)/i', "SELECT TABLE_NAME AS Name FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME LIKE $1", $qry);
         $qry = preg_replace('/show\s*index\s*from\s*([\w|.]*)/i', "SELECT NAME AS KeyName FROM SYS.INDEXES WHERE NAME = '$1'", $qry);
         $qry = preg_replace('/show\s*fields\s*from\s*([\w|.]*)/i', "SELECT COLUMN_NAME AS Field, (DATA_TYPE + CASE WHEN (CHARACTER_MAXIMUM_LENGTH IS NOT NULL ) THEN '(' + CAST ( CHARACTER_MAXIMUM_LENGTH  AS VARCHAR) + ')' ELSE '' END ) AS Type FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '$1'", $qry);
         $qry = preg_replace('/optimize table([\w|.]*.*)/i', "ALTER INDEX ALL ON $1 REORGANIZE; ALTER INDEX ALL ON $1 REBUILD", $qry);
-        $qry = preg_replace('/[\w|\s]*date_add\s*\((.*),[\w|\s]*INTERVAL\s*(\d*)\s*(\w*)\s*\)/i', 'DATEADD($3, $2, $1)', $qry);
-        $qry = preg_replace('/[\w|\s]*date_sub\s*\((.*),[\w|\s]*INTERVAL\s*(\d*)\s*(\w*)\s*\)/i', 'DATEADD($3, -$2, $1)', $qry);
-        $qry = preg_replace('/date_format\s*\(\s*([\w|.]*)\s*,\s*[\'|"]%Y-%m-%d[\'|"]\s*\)/i', 'CONVERT(varchar(10),$1,120)', $qry);
-        $qry = preg_replace('/date_format\(([\w|.]*)\\Q, "%Y")\E/i', 'CONVERT(varchar(4),$1,112)', $qry); // ?
-        $qry = preg_replace('/date_format\(([\w|.]*)\\Q, "%m")\E/i', 'CONVERT(varchar(2),$1,101)', $qry); // ?
-        $qry = preg_replace('/date_format\(([\w|.]*)\\Q, "%d")\E/i', 'CONVERT(varchar(2),$1,103)', $qry); // ?
+        $qry = preg_replace('/date_add\s*\((.*),[\w|\s]*INTERVAL\s*(\d{1,2})\s*(\w*)\s*\)/i', 'DATEADD($3, $2, $1)', $qry);
+        $qry = preg_replace('/date_sub\s*\((.*),[\w|\s]*INTERVAL\s*(\d{1,2})\s*(\w*)\s*\)/i', 'DATEADD($3, -$2, $1)', $qry);
+        $qry = preg_replace('/date_format\s*\(([\w|\s|\(|\)]*),[\w|\s]*[\'|"]%Y-?%m-?%d[\'|"]\s*\)/i', 'CONVERT(varchar(10),$1,120)', $qry);
+        $qry = preg_replace('/date_format\(([\w|.]*)\\Q, "%Y")\E/i', 'CONVERT(varchar(4),$1,112)', $qry);
+        $qry = preg_replace('/date_format\(([\w|.]*)\\Q, "%m")\E/i', 'CONVERT(varchar(2),$1,101)', $qry);
+        $qry = preg_replace('/date_format\(([\w|.]*)\\Q, "%d")\E/i', 'CONVERT(varchar(2),$1,103)', $qry);
         $qry = preg_replace('/unix_timestamp\((.*?)\)/i', "DATEDIFF(s, '19700101', $1)", $qry);
         $qry = preg_replace('/dayofmonth\((.*?)\)/i', "DATEPART(d, $1)", $qry);
         $qry = preg_replace('/dayofmonth\(([\w|.]*?)\)/i', 'DATEPART(d,$1)', $qry);
@@ -105,44 +104,15 @@
         {
             $qry = _LimitToTopN($qry);
         }
+
         // End Dynamic SQL Translations
 
-        $query = '';
-        //$query = 'SET QUOTED_IDENTIFIER OFF; ';
-        $query .= $qry;
+        $query = $qry;
 
-        // vvvvvvvvvvv DEBUG --- remove when ready
-
-        $myFile = "C:\inetpub\wwwroot\oscommerce\debug\queryLog.txt";
-        $fh = fopen($myFile, 'a+') or die("can't open file");
-        $crlf = chr(13).chr(10);
-        fwrite($fh, $crlf.'$$link=> '. $$link . ' Query=> '.$query);
-        fclose($fh);
-
-        // ^^^^^^^^^^ DEBUG --- remove when ready
-
-        $db_resource = sqlsrv_query($$link, $query, array (), array ("Scrollable" => SQLSRV_CURSOR_KEYSET));
+        $db_resource = sqlsrv_query($$link, trim ($query), array (), array ("Scrollable" => SQLSRV_CURSOR_KEYSET));
 
         if ($db_resource === false || !is_resource($db_resource))
         {
-
-            // vvvvv DEBUG --- remove when ready
-
-            // msk
-            DebugBreak();
-
-            $myFile = "C:\inetpub\wwwroot\oscommerce\debug\queryLog.txt";
-            $fh = fopen($myFile, 'a+') or die("can't open file");
-            fwrite($fh, $crlf.'**Error on last query**'.$crlf);
-            fwrite($fh, $crlf.tep_db_format_error().$crlf);
-
-            var_dump(debug_backtrace());
-            $backtrace = (debug_backtrace());
-            fwrite($fh, $crlf.'Backtrace: '.$backtrace.$crlf);
-            fclose($fh);
-
-            // ^^^^^ DEBUG --- remove when ready
-
             if (defined('STORE_DB_TRANSACTIONS') && (STORE_DB_TRANSACTIONS == 'true'))
             {
                 $logger->write(tep_db_format_error(), 'ERROR');
@@ -152,6 +122,66 @@
         }
 
         return $db_resource;
+    }
+
+    function tep_db_backup($backup_file, $database = DB_DATABASE, $desc, $link = 'db_link')
+    {
+        global $$link;
+
+        sqlsrv_configure( 'WarningsReturnAsErrors', false );
+
+        $self_connect = false;
+        if (!$$link) {
+            $$link = tep_db_connect();
+            $self_connect = true;
+        }
+
+        if ($desc =='') {
+            $desc = ("Full backup for " . DB_DATABASE . "'");
+        }
+
+        $query = "BACKUP DATABASE " . DB_DATABASE . " TO DISK = '" . $backup_file . "' WITH DESCRIPTION = '" . $desc . "'";
+
+        $result = tep_db_query($query);
+
+        sqlsrv_free_stmt($result);
+
+        if ($self_connect) {
+            tep_db_close();
+        }
+
+    }
+
+    function tep_db_restore($restore_file, $database = DB_DATABASE, $link = 'db_link')
+    {
+        global $$link;
+
+        if ( is_null($restore_file) || $restore_file =='') {
+
+            return false;
+        }
+
+        sqlsrv_configure( 'WarningsReturnAsErrors', false );
+
+        $self_connect = false;
+        if (!$$link) {
+            $$link = tep_db_connect();
+            $self_connect = true;
+        }
+
+        $query = "USE MASTER; ";
+        $query .= "RESTORE DATABASE " . DB_DATABASE . " FROM DISK = '" . $restore_file . "'; ";
+        $query .= "USE " . DB_DATABASE;
+
+        $result = tep_db_query($query);
+
+        sqlsrv_free_stmt($result);
+
+        if ($self_connect) {
+            tep_db_close();
+        }
+
+        return true;
     }
 
     function tep_db_perform($table, $data, $action = 'insert', $parameters = '', $link = 'db_link')
@@ -174,7 +204,7 @@
                 switch ((string)$value)
                 {
                     case 'now()':
-                        $query .= 'now(), ';
+                        $query .= 'getdate(), ';
                         break;
 
                     case 'null':
@@ -197,7 +227,7 @@
                 switch ((string)$value)
                 {
                     case 'now()':
-                        $query .= $columns.' = now(), ';
+                        $query .= $columns.' = getdate(), ';
                         break;
 
                     case 'null':
@@ -217,12 +247,12 @@
 
     function tep_db_fetch_array($queryresult)
     {
-        return sqlsrv_fetch_array($queryresult, SQLSRV_FETCH_ASSOC);
+        $row = sqlsrv_fetch_array($queryresult, SQLSRV_FETCH_ASSOC);
+        return $row;
     }
 
     function tep_db_fetch_all($queryresult)
     {
-
         $rows = array ();
 
         if ($queryresult !== null)
@@ -259,45 +289,80 @@
 
     function tep_db_result($result, $row, $field = '')
     {
-        return mysql_result($result, $row, $field);
+        $result = sqlsrv_fetch( $stmt, SQLSRV_SCROLL_ABSOLUTE, $row);
+        $field = sqlsrv_get_field ($result, $field);
+        sqlsrv_free_stmt($stmt);
+
+        return $field;
     }
 
     function tep_db_num_rows($stmt)
     {
         global $$link;
 
-        /*
-        $L = tep_db_connect();
-        $q = 'select TOP 1 id from administrators';
-        $S = sqlsrv_query($L, $q, array (), array ("Scrollable" => SQLSRV_CURSOR_KEYSET));
-        $num_rows = sqlsrv_num_rows($S);
-        */
-
-        //        $num_rows_affected = sqlsrv_rows_affected($stmt);
         $num_rows = sqlsrv_num_rows($stmt);
         return $num_rows;
     }
 
-    function tep_db_data_seek($db_query, $row_number)
+    function tep_db_data_seek($stmt, $row_number)
     {
-        return mysql_data_seek($db_query, $row_number);
+        $result = sqlsrv_fetch($stmt, SQLSRV_SCROLL_ABSOLUTE, $row_number);
+        $rows = tep_db_num_rows($stmt);
+        return ( $rows > 0 );
+    }
+
+    function tep_db_get_server_version()
+    {
+        $info = tep_db_get_server_info();
+        $version = $info [ 'SQLServerVersion' ];
+        return $version;
+    }
+
+    function tep_db_get_server_info()
+    {
+        global $$link;
+
+        if (!$$link) {
+            $$link = tep_db_connect();
+        }
+
+        $link = $$link;
+        $server_info = sqlsrv_server_info($link);
+        return $server_info;
     }
 
     function tep_db_insert_id($link = 'db_link')
     {
         global $$link;
 
-        return mysql_insert_id($$link);
+        $stmt = sqlsrv_query($link, 'SELECT SCOPE_IDENTITY()');
+        $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_NUMERIC);
+        sqlsrv_free_stmt($stmt);
+
+        if (array_key_exists(0, $row))
+        {
+            return $row[0];
+        }
+        else
+        {
+            return false;
+        }
     }
 
     function tep_db_free_result($db_query)
     {
-        return mysql_free_result($db_query);
+        return sqlsrv_free_stmt($db_query);
     }
 
     function tep_db_fetch_fields($db_query)
     {
-        return mysql_fetch_field($db_query);
+        //msk
+        DebugBreak();
+
+        $result = sqlsrv_fetch( $stmt, SQLSRV_SCROLL_ABSOLUTE, $row);
+        $field = sqlsrv_get_field ($result, $field);
+        sqlsrv_free_stmt($stmt);
+        return $field;
     }
 
     function tep_db_output($string)
@@ -307,21 +372,15 @@
 
     function tep_db_input($string, $link = 'db_link')
     {
-
-        /*
-        global $$link;
-
-
-        if (function_exists('mysql_real_escape_string')) {
-        return mysql_real_escape_string($string, $$link);
-        } elseif (function_exists('mysql_escape_string')) {
-        return mysql_escape_string($string);
-        }
-
-        return addslashes($string);
-        */
-
-        $result_string = str_replace("'", "''", $string);
+        $result_string = strtr($string, array(
+                                              "\x00" => '\x00',
+                                              "\n" => '\n',
+                                              "\r" => '\r',
+                                              '\\' => '\\\\',
+                                              "'" => "\'",
+                                              '"' => '\"',
+                                              "\x1a" => '\x1a'
+                                              ));
         return ($result_string);
     }
 
@@ -533,13 +592,9 @@
         }
     }
 
-//    function tep_db_error($query, $errno, $error, $err_text = '', $fatal = true)
     function tep_db_error($err_text = '', $query, $fatal = true)
     {
         global $db_error;
-
-        // msk
-        DebugBreak();
 
         $err_text .= ' '.tep_db_format_error();
         $db_error = $err_text;
@@ -547,11 +602,6 @@
         echo '<div class="systemError">';
         echo ('<hr><h3>SQL Error:</h3> <b>'.$err_text.'</b>');
         echo ('<br><br><h4>Query:</h4> <pre>'.$query.'</pre>');
-
-        if (defined('IS_ADMIN_FLAG') && IS_ADMIN_FLAG == true)
-            echo
-            'If you were entering information, press the BACK button in your browser and re-check the information you had entered to be sure you left no blank fields.<br />';
-
         echo '</div>';
 
         print('<pre>');

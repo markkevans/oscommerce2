@@ -56,18 +56,15 @@
 
   function osc_db_select_db($database) {
     global $$db_type;
+
     switch ($$db_type)
     {
         case 'mysql':
-
             return mysql_select_db($database);
-
             break;
 
         case 'sqlsrv':
-
-    //        return mysql_select_db($database);
-
+            // Done at connect time;
             break;
     }
   }
@@ -93,7 +90,7 @@
     }
   }
 
-  function osc_db_error_sqlsrv($err_text, $query, $fatal = true) {
+  function osc_db_error_sqlsrv($err_text, $query='', $fatal = true) {
     global $db_error;
 
 // msk
@@ -114,10 +111,8 @@
         $db_error = $err_text;
 
         echo '<div class="systemError">';
-            echo ('<hr><h3>SQL Error:</h3> <b>' . $err_text . '</b>');
-            echo ('<br><br><h4>Query:</h4> <pre>' . $query . '</pre>');
-            if (defined('IS_ADMIN_FLAG') && IS_ADMIN_FLAG == true)
-                echo 'If you were entering information, press the BACK button in your browser and re-check the information you had entered to be sure you left no blank fields.<br />';
+        echo ('<hr><h3>SQL Error:</h3> <b>' . $err_text . '</b>');
+        echo ('<br><br><h4>Query:</h4> <pre>' . $query . '</pre>');
         echo '</div>';
 
         print('<pre>');
@@ -462,6 +457,8 @@
 
   function osc_db_install_mysql($sql_file)
   {
+        //msk
+        DebugBreak();
 
     if (!@osc_db_select_db($database)) {
       if (@osc_db_query('create database ' . $database)) {

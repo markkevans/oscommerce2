@@ -29,13 +29,20 @@
 
         $db_error = false;
         osc_db_connect($db['DB_DATABASE_TYPE'],$db['DB_SERVER'], $db['DB_SERVER_USERNAME'], $db['DB_SERVER_PASSWORD'], $db['DB_DATABASE']);
-/*
+
         if ($db_error == false) {
           if (!@osc_db_select_db($db['DB_DATABASE'])) {
-            $db_error = mysql_error();
+              switch (DB_DATABASE_TYPE) {
+                  case 'mysql':
+                    $db_error = mysql_error();
+                  break;
+                  case 'sqlsrv':
+                    osc_db_error_sqlsrv('connect error');
+                  break;
+              }
           }
         }
-*/
+
         if ($db_error != false) {
           echo '[[0|' . $db_error . ']]';
         } else {
@@ -57,15 +64,7 @@
         osc_db_connect($db['DB_DATABASE_TYPE'],$db['DB_SERVER'], $db['DB_SERVER_USERNAME'], $db['DB_SERVER_PASSWORD'], $db['DB_DATABASE']);
         $sql_file = null;
         $database_type = $db['DB_DATABASE_TYPE'];
-        switch ($database_type)
-        {
-            case 'mysql':
-                $sql_file = $dir_fs_www_root . '/oscommerce.sql';
-            break;
-            case 'sqlsrv':
-                $sql_file = $dir_fs_www_root . '/oscommerce_sqlsrv.sql';
-            break;
-        }
+        $sql_file = $dir_fs_www_root . '/oscommerce_' . $database_type . '.sql';
 
         osc_set_time_limit(0);
         osc_db_install($db['DB_DATABASE'], $sql_file);
