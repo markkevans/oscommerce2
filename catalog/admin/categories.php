@@ -259,7 +259,17 @@
 
               $sql_data_array = array_merge($sql_data_array, $insert_sql_data);
 
-              tep_db_perform(TABLE_PRODUCTS_DESCRIPTION, $sql_data_array);
+              /**
+              * Need to do a 'SET INSERT_IDENTITY TABLE ON' for sqlsrv
+              */
+              if (DB_DATABASE_TYPE == 'sqlsrv') {
+                tep_db_perform_with_identity(TABLE_PRODUCTS_DESCRIPTION, $sql_data_array);
+              }
+              else {
+                tep_db_perform(TABLE_PRODUCTS_DESCRIPTION, $sql_data_array);
+              }
+
+
             } elseif ($action == 'update_product') {
               tep_db_perform(TABLE_PRODUCTS_DESCRIPTION, $sql_data_array, 'update', "products_id = '" . (int)$products_id . "' and language_id = '" . (int)$language_id . "'");
             }

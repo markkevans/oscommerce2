@@ -710,6 +710,7 @@ function check_form() {
     }
     $customers_query_raw = "select c.customers_id, c.customers_lastname, c.customers_firstname, c.customers_email_address, a.entry_country_id from " . TABLE_CUSTOMERS . " c left join " . TABLE_ADDRESS_BOOK . " a on c.customers_id = a.customers_id and c.customers_default_address_id = a.address_book_id " . $search . " order by c.customers_lastname, c.customers_firstname";
     $customers_split = new splitPageResults($HTTP_GET_VARS['page'], MAX_DISPLAY_SEARCH_RESULTS, $customers_query_raw, $customers_query_numrows);
+
     $customers_query = tep_db_query($customers_query_raw);
     while ($customers = tep_db_fetch_array($customers_query)) {
       $info_query = tep_db_query("select customers_info_date_account_created as date_account_created, customers_info_date_account_last_modified as date_account_last_modified, customers_info_date_of_last_logon as date_last_logon, customers_info_number_of_logons as number_of_logons from " . TABLE_CUSTOMERS_INFO . " where customers_info_id = '" . $customers['customers_id'] . "'");
@@ -722,9 +723,29 @@ function check_form() {
         $reviews_query = tep_db_query("select count(*) as number_of_reviews from " . TABLE_REVIEWS . " where customers_id = '" . (int)$customers['customers_id'] . "'");
         $reviews = tep_db_fetch_array($reviews_query);
 
+        /**
+        * TODO Gracefully recover from bad records.
+        */
+        /*
+        if (!is_array($country)) {
+            $country = array ('Country is NULL');
+        }
+        if (!is_array($info)) {
+            $info = array ('Info is NULL');
+        }
+        if (!is_array($reviews)) {
+            $reviews = array ('Reviews is NULL');
+        }
+        */
         $customer_info = array_merge($country, $info, $reviews);
 
+        /*
+        if (!is_array($customers) or !is_array($customer_info)) {
+            DebugBreak();
+        }
+        */
         $cInfo_array = array_merge($customers, $customer_info);
+
         $cInfo = new objectInfo($cInfo_array);
       }
 

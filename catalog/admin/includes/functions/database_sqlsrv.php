@@ -16,7 +16,7 @@
         global $$link;
 
         sqlsrv_configure(SQLSRV_LOG_SYSTEM_ALL, 1);
-        sqlsrv_configure( 'WarningsReturnAsErrors', false );
+        sqlsrv_configure( 'WarningsReturnAsErrors', true ); // msk SET TO FALSE FOR PROD
 
         $conn_array = array
         (
@@ -184,7 +184,11 @@
         return true;
     }
 
-    function tep_db_perform($table, $data, $action = 'insert', $parameters = '', $link = 'db_link')
+    function tep_db_perform_with_identity($table, $data, $action = 'insert', $parameters = '', $link = 'db_link') {
+        return tep_db_perform($table, $data, $action, $parameters, $link, true);
+    }
+
+    function tep_db_perform($table, $data, $action = 'insert', $parameters = '', $link = 'db_link', $has_identity = false)
     {
         reset($data);
 
@@ -201,7 +205,7 @@
 
             while (list(, $value) = each($data))
             {
-                switch ((string)$value)
+                switch (strtolower((string)$value))
                 {
                     case 'now()':
                         $query .= 'getdate(), ';
@@ -217,6 +221,10 @@
                 }
             }
             $query = substr($query, 0, -2).')';
+
+            if ($has_identity) {
+                $query = 'SET IDENTITY_INSERT '.$table.' ON; '.$query.'; SET IDENTITY_INSERT '.$table.' OFF; ';
+            }
         }
         elseif ($action == 'update')
         {
@@ -224,7 +232,7 @@
 
             while (list($columns, $value) = each($data))
             {
-                switch ((string)$value)
+                switch (strtolower((string)$value))
                 {
                     case 'now()':
                         $query .= $columns.' = getdate(), ';
@@ -335,7 +343,7 @@
     {
         global $$link;
 
-        $stmt = sqlsrv_query($link, 'SELECT SCOPE_IDENTITY()');
+        $stmt = sqlsrv_query($$link, 'SELECT SCOPE_IDENTITY()');
         $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_NUMERIC);
         sqlsrv_free_stmt($stmt);
 
@@ -356,9 +364,6 @@
 
     function tep_db_fetch_fields($db_query)
     {
-        //msk
-        DebugBreak();
-
         $result = sqlsrv_fetch( $stmt, SQLSRV_SCROLL_ABSOLUTE, $row);
         $field = sqlsrv_get_field ($result, $field);
         sqlsrv_free_stmt($stmt);
@@ -613,15 +618,8 @@
 
         if ($fatal)
         {
-            // msk
-            DebugBreak();
-
-            //die('<font color="#000000"><b>' . $errno . ' - ' . $error . '<br><br>' . $query . '<br><br><small><font color="#ff0000">[TEP STOP]</font></small><br><br></b></font>');
-            die();
+            die('<font color="#000000"><b>' . $errno . ' - ' . $error . '<br><br>' . $query . '<br><br><small><font color="#ff0000">[TEP STOP]</font></small><br><br></b></font>');
         }
-
-        // msk
-        DebugBreak();
 
         return $db_error;
     }
