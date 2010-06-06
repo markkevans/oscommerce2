@@ -129,11 +129,10 @@ function prepare_input($zp_string) {
 }
 
 function osc_db_query_sqlsrv($query, $link = 'db_link') {
-    global $$link;
     global $db_error;
     global $$db_type;
 
-    if (!$$link) {
+    if (!$link) {
         osc_db_error_sqlsrv('Database not connected');
     }
 
@@ -177,7 +176,7 @@ function osc_db_query_sqlsrv($query, $link = 'db_link') {
     // End Dynamic SQL Translations
 
     $query = 'SET QUOTED_IDENTIFIER OFF; '.$qry;
-    $db_resource = sqlsrv_query($$link, $query, array (), array ("Scrollable" => SQLSRV_CURSOR_KEYSET));
+    $db_resource = sqlsrv_query($link, $query, array(), array( "Scrollable" => SQLSRV_CURSOR_KEYSET));
 
     if ($zp_db_resource === false || !is_resource($db_resource)) {
         osc_db_error_sqlsrv('osc_db_query_sqlsrv', $query);
