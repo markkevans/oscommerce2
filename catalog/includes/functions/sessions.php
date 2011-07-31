@@ -106,14 +106,10 @@
     global $session_started;
 
     if ($session_started == true) {
-      if (PHP_VERSION < 4.3) {
-        return session_register($variable);
+      if (isset($GLOBALS[$variable])) {
+        $_SESSION[$variable] =& $GLOBALS[$variable];
       } else {
-        if (isset($GLOBALS[$variable])) {
-          $_SESSION[$variable] =& $GLOBALS[$variable];
-        } else {
-          $_SESSION[$variable] = null;
-        }
+        $_SESSION[$variable] = null;
       }
     }
 
@@ -121,19 +117,11 @@
   }
 
   function tep_session_is_registered($variable) {
-    if (PHP_VERSION < 4.3) {
-      return session_is_registered($variable);
-    } else {
-      return isset($_SESSION) && array_key_exists($variable, $_SESSION);
-    }
+    return isset($_SESSION) && array_key_exists($variable, $_SESSION);
   }
 
   function tep_session_unregister($variable) {
-    if (PHP_VERSION < 4.3) {
-      return session_unregister($variable);
-    } else {
-      unset($_SESSION[$variable]);
-    }
+    unset($_SESSION[$variable]);
   }
 
   function tep_session_id($sessid = '') {
