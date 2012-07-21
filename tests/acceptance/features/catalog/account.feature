@@ -1,3 +1,4 @@
+@account
 Feature: Account Management
   In order to manage my orders
   As a website user
@@ -24,7 +25,7 @@ Feature: Account Management
       And I fill in "telephone" with "01222 435353"
       And I fill in "password" with "password"
       And I fill in "confirmation" with "password"
-      And I press "tdb4"
+      And I press "Continue"
     Then I should see "Your Account Has Been Created!"
 
   Scenario: Login to Account
@@ -35,7 +36,7 @@ Feature: Account Management
     When I follow "log yourself in"
       And I fill in "email_address" with "testing2@example.com"
       And I fill in "password" with "password"
-      And I press "tdb5"
+      And I press "Sign In"
     Then I should see "Welcome back Behat!"
 
   Scenario: Logout of Account

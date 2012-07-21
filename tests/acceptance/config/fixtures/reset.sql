@@ -1,3 +1,5 @@
+TRUNCATE TABLE action_recorder;
+
 TRUNCATE TABLE customers;
 TRUNCATE TABLE customers_basket;
 TRUNCATE TABLE customers_basket_attributes;

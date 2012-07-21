@@ -1,3 +1,4 @@
+@search
 Feature: Search
   In order find what I am looking for
   As a website user

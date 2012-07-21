@@ -1,4 +1,5 @@
-Feature: Account
+@checkout
+Feature: Purchase Products
   In order to purchase products
   As a website user
   I need to be able to complete checkout
