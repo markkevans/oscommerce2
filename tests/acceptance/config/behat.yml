@@ -1,9 +1,35 @@
 default:
     paths:
-        features: features
-        bootstrap: %behat.paths.features%/bootstrap
+      features: %behat.paths.base%/../features
+      bootstrap: %behat.paths.features%/bootstrap
     extensions:
         Behat\MinkExtension\Extension:
             goutte: ~
             selenium2: ~
-            base_url:   <enter your url here>
+            base_url:   <enter your url>
+    context:
+        parameters:
+          database:
+            username: ''
+            password: ''
+            dbname:   ''
+            host:     ''
+            driver:   'pdo_mysql'
+          Phabric:
+            entities:
+              customers:
+                tableName: 'customers'
+                primaryKey: 'id'
+                nameCol: 'customers_email_address'
+                nameTransformations:
+                  Email: customers_email_address
+                  Gender: customers_gender
+                  Gender: customers_gender
+                  Firstname: customers_firstname
+                  Lastname: customers_lastname
+                  DOB: customers_dob
+                  Phone: customers_telephone
+                  Password: customers_password
+                  Newsletter: customers_newsletter
+                  Fax: customers_fax
+                  Address: customers_default_address_id
