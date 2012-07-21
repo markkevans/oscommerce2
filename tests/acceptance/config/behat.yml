@@ -15,15 +15,16 @@ default:
             dbname:   ''
             host:     ''
             driver:   'pdo_mysql'
+          browser: chrome
+          javascript_session: webdriver            
           Phabric:
             entities:
               customers:
                 tableName: 'customers'
-                primaryKey: 'id'
+                primaryKey: 'customers_id'
                 nameCol: 'customers_email_address'
                 nameTransformations:
                   Email: customers_email_address
-                  Gender: customers_gender
                   Gender: customers_gender
                   Firstname: customers_firstname
                   Lastname: customers_lastname
@@ -33,3 +34,22 @@ default:
                   Newsletter: customers_newsletter
                   Fax: customers_fax
                   Address: customers_default_address_id
+              address_book:
+                tableName: 'address_book'
+                primaryKey: 'id'
+                nameCol: null
+                nameTransformations:
+                  Customer: customer_id
+                  Gender: entry_gender
+                  Company: entry_company
+                  Firstname: entry_firstname
+                  Lastname: entry_lastname
+                  Address: entry_street_address
+                  Suburb: entry_street_suburb
+                  Postcode: entry_postcode
+                  City: entry_city
+                  State: entry_state
+                  Country: entry_country_id
+                  Zone: entry_zone_id
+                dataTransformations:
+                  customer_id: CUSTOMERLOOKUP
